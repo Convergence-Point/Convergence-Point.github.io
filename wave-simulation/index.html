@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why my wave simulation kept blowing up</title>
+<script>
+  window.MathJax = { tex: { tags: 'ams' } };  // auto-number \begin{equation}
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  /* Dark theme */
+  html { background: #000; }
+  body { margin: 0; font: normal 13px Arial, Tahoma, Helvetica, FreeSans, sans-serif; color: #fff; background: #000; line-height: 1.4; }
+  a:link { text-decoration: none; color: #888; }
+  a:visited { text-decoration: none; color: #888; }
+  a:hover { text-decoration: underline; color: #ccc; }
+  a:focus-visible { outline: 2px solid #f2a900; outline-offset: 2px; }
+  .content { max-width: 930px; margin: 0 auto; padding: 20px 15px 40px; }
+  .blog-title { font: normal bold 30px Arial, Tahoma, Helvetica, FreeSans, sans-serif; margin: 10px 0 20px; }
+  .blog-title a { color: #fff; }
+  article.post { background: #141414; padding: 15px 20px 20px; }
+  h1.post-title { font: normal bold 22px Arial, Tahoma, Helvetica, FreeSans, sans-serif; margin: 0 0 1em; color: #fff; }
+  .post-body { position: relative; font-size: 15px; line-height: 1.5; }
+  .post-body h2 { font: normal bold 18px Arial, Tahoma, Helvetica, FreeSans, sans-serif; color: #fff; margin: 1.2em 0 .5em; }
+  .post-body h3 { font: normal bold 16px Arial, Tahoma, Helvetica, FreeSans, sans-serif; color: #fff; margin: 1.2em 0 .5em; }
+  .post-body h4 { font: normal bold 14px Arial, Tahoma, Helvetica, FreeSans, sans-serif; color: #fff; margin: 1.2em 0 .5em; }
+  .post-body ul { padding: 0 2.5em; margin: .5em 0; list-style: disc; }
+  .post-body ul li { padding: .25em 0; margin-bottom: .25em; }
+  .post-body img { padding: 8px; background: #222; border: 1px solid transparent; max-width: 100%; height: auto; }
+  .separator { clear: both; }
+  .post-footer { margin: 1.5em 0 0; color: #666; font-size: 12px; border-top: 1px solid #222; padding-top: .8em; }
+  mjx-container { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+</style>
+</head>
+<body>
+<div class="content">
+<div class="blog-title"><a href="../index.html">Convergence Point</a></div>
+<article class="post">
+<h1 class="post-title">Why my wave simulation kept blowing up</h1>
+<div class="post-body entry-content">
+<p>
+  A few years ago, I spent a while implementing some simulations of massless
+  scalar fields in AdS. This means that we were using the simplest description
+  of matter with only a Kinetic term in a geometric background with a negative
+  cosmological constant.
+</p>
+<h2 style="text-align: left;">Why is this interesting?</h2>
+<p>
+  Although these collections of spacetimes are not favored by measurements made
+  of our current Universe, it has been shown that the dynamics in the AdS
+  spacetime is related to
+  <a href="https://arxiv.org/pdf/hep-th/9108028" target="_blank">conformal field theories</a>, as in what happens in one system has an analogous phenomenon in the other.
+  People have been using this relationship to better understand both classes of
+  systems.
+</p>
+<p>
+  The starting point for what I'm simulating is described in a
+  technical paper&nbsp;<a href="https://arxiv.org/pdf/1104.3702" target="_blank">(Bizoń &amp; Rostworowski, arXiv:1104.3702)</a>&nbsp;but I'll explain here anyway.
+</p>
+<p><br /></p>
+<div class="separator" style="clear: both; text-align: center;">
+  <div class="BLOG_html_snippet"><div class="paper-equations">
+      <p>
+        <strong>Einstein-scalar field equations</strong> (massless scalar,
+        \(\Lambda &lt; 0\) ):
+      </p>
+      \begin{equation} G_{\alpha\beta} + \Lambda g_{\alpha\beta} = 8\pi
+      G\left(\partial_\alpha\phi\,\partial_\beta\phi -
+      \tfrac{1}{2}\,g_{\alpha\beta}(\partial\phi)^2\right) \end{equation}
+      \begin{equation} g^{\alpha\beta}\nabla_\alpha\nabla_\beta\,\phi = 0
+      \end{equation}
+
+      <p>
+        <strong>Spherically symmetric metric ansatz</strong>, with
+        \(\ell^2=-3/\Lambda\) and \(0\le x&lt;\pi/2\):
+      </p>
+      \begin{equation} ds^2 = \frac{\ell^2}{\cos^2 x}\left(-A e^{-2\delta}\,dt^2
+      + A^{-1}dx^2 + \sin^2\!x\,d\Omega^2\right) \end{equation}
+
+      <p>
+        <strong>Wave equation</strong>, with \(\Phi=\phi'\) and
+        \(\Pi=A^{-1}e^{\delta}\dot\phi\) (dots and primes denote \(\partial_t\)
+        and \(\partial_x\)):
+      </p>
+      \begin{equation} \dot\Phi = \left(A e^{-\delta}\,\Pi\right)', \qquad
+      \dot\Pi = \frac{1}{\tan^2 x}\left(\tan^2 x\; A e^{-\delta}\,\Phi\right)'
+      \end{equation}
+
+      <p><strong>Constraints</strong> (units where \(4\pi G=1\)):</p>
+      \begin{equation} A' = \frac{1+2\sin^2 x}{\sin x\cos x}\,(1-A) - \sin x\cos
+      x\,A\left(\Phi^2+\Pi^2\right) \end{equation} \begin{equation} \delta' =
+      -\sin x\cos x\left(\Phi^2+\Pi^2\right) \end{equation}
+    </div></div>
+</div>
+<br />
+<div class="separator" style="clear: both; text-align: justify;">
+  To clarify what this all means:
+</div>
+<div class="separator" style="clear: both; text-align: justify;">
+  <ul>
+    <li>
+      Eq. 1 is the Einstein equation, the left-hand side is the spacetime
+      geometry and the right-hand side is the energy-momentum tensor given the
+      scalar field's interactions.
+    </li>
+    <li>Eq. 2 is the scalar field evolution equations.</li>
+    <li>
+      Eq. 3 is the metric tensor. This tensor tells us how distances/times
+      change with coordinates.
+    </li>
+    <li>
+      Eq. 4 are both a trivial result of the change of variables we are using
+      and a derivation from Eq. 2. These equations are at the center of our
+      simulation as they define how the field evolves.
+    </li>
+    <li>
+      Eq. 5 and Eq. 6 are derived from a lengthy computation from Eq. 1 with the
+      metric tensor in Eq. 3. These tell us the profiles of how the space curves
+      with the presence of the field.
+    </li>
+  </ul>
+  <div>All of these functions are dependent on the (t,x) coordinates.</div>
+  <div>
+    Regarding the metric tensor... In these coordinates, we can visualize the
+    spacetime as a cylinder where x is the radius of the cylinder and t the
+    "height". The solution we are looking for is spherically symmetric so we are
+    looking for variations in the dt.dt and dr.dr components. Notice also that
+    the impact of the cosmological constant is absorbed into the coordinate
+    system: this means that if we study the system for any given value of the
+    cosmological constant, we'll be able to scale the solution for another value
+    without redoing the whole simulation/calculations.
+  </div>
+  <div><br /></div>
+  <div>
+    Now, if you look at eq. 4 and squint your eyes a little, you'll be able to
+    see the wave equation in spherical coordinates. If A = 1 and delta = 0 we
+    have
+  </div>
+  <div><br /></div>
+  <div>\[ \dot\Pi = \frac{1}{\tan^2 x}\,\bigl(\tan^2 x\,\Phi\bigr)' \]</div>
+  <div><br /></div>
+  <div>
+    This is the massless wave equation on the AdS background in spherical
+    coordinates with spherical symmetry and m=0, where tan&#178;x plays the role that
+    r&#178; plays in flat space. The massless
+    <a href="https://en.wikipedia.org/wiki/Klein%E2%80%93Gordon_equation" target="_blank">Klein-Gordon equation</a>
+    on pure AdS, which has the same structure as the spherical wave equation.
+  </div>
+  <div><br /></div>
+  <div>
+    Now that we know how to compute the profiles and field evolution we need to
+    understand how they behave at the boundaries. There are two important
+    boundaries: x = 0 and x = pi/2. For the system to be physically
+    representative we need to set boundary conditions
+  </div>
+  <div><br /></div>
+  <div class="separator" style="clear: both; text-align: center;">
+    <div class="BLOG_html_snippet"><div class="paper-equations" style="overflow-x: auto;">
+        <p>
+          Boundary behavior of \(\phi\), \(A\) and \(\delta\), from Bizoń and
+          Rostworowski,
+          <a href="https://arxiv.org/abs/1104.3702">arXiv:1104.3702</a>.
+        </p>
+
+        <p>
+          <strong>Near the origin</strong> (\(x\to 0\)), where smoothness gives
+          power series in \(x\), normalized so that \(\delta(t,0)=0\) and \(t\)
+          is the proper time at the center:
+        </p>
+        \begin{equation}\tag{7} \begin{aligned} \phi(t,x) &amp;= f_0(t) +
+        O(x^2),\\ \delta(t,x) &amp;= O(x^2),\\ A(t,x) &amp;= 1 + O(x^2).
+        \end{aligned} \end{equation}
+
+        <p>
+          <strong>Near the AdS boundary</strong> (\(x\to\pi/2\)), with
+          \(\rho=\pi/2-x\), where smoothness and finite total mass \(M\) fix the
+          expansions:
+        </p>
+        \begin{equation}\tag{8} \begin{aligned} \phi(t,x) &amp;=
+        f_\infty(t)\,\rho^3 + O(\rho^5),\\ \delta(t,x) &amp;= \delta_\infty(t) +
+        O(\rho^6),\\ A(t,x) &amp;= 1 - 2M\rho^3 + O(\rho^6). \end{aligned}
+        \end{equation}
+      </div></div>
+  </div>
+  <br />
+  <div><br /></div>
+  <div><br /></div>
+  <h2>Solving the equation</h2>
+  <div>
+    For the simulation, we need to discretize the spacetime. We use a
+    <a href="https://en.wikipedia.org/wiki/Finite_difference_method" target="_blank">finite differences method</a>
+    and for the time evolution we use
+    <a href="https://mathworld.wolfram.com/Runge-KuttaMethod.html" target="_blank">RK4</a>.
+  </div>
+</div>
+<div><br /></div>
+We set a grid with N equidistant points over the radial coordinate ranging from
+0 to pi/2. In this case we'll have
+<div></div>
+<div>
+  <div>\[ dx = \frac{\pi}{2(N-1)} \]</div>
+  <div><br /></div>
+  <div>
+    Likewise we also have a condition for the timestep we are able to calculate.
+    The wave velocity in these coordinates is lesser or equal to 1 and the
+    <a href="https://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition#Statement" target="_blank">Courant condition</a>
+    requires
+  </div>
+  <div>\[ dt \leqslant \frac{dx}{c} = dx \]</div>
+  <div><br /></div>
+  <div>In practice, I use dt = dx/2.</div><div>At any given time we can compute the value of A and δ and then use them to
+    compute the rhs of the evolution equations. At the boundaries I add ghost points outside the grid, with values set by the parity of Π and Φ at each end, so the stencil can be applied at every grid point.
+  </div>
+  <div><br /></div>
+  <h3 style="text-align: left;">So... What's the challenge here?</h3>
+  <div>
+    If you take a look at the evolution equation for Π, we see that we have,
+    near the x=0, an indetermination 0/0 and we need to be careful about how we
+    handle this.
+  </div>
+  <div><br /></div>
+  <div>Expanding the product gives</div>
+  <div>\[\dot\Pi = \Phi' + \frac{2\Phi}{\sin x\cos x} \]</div>
+  <div>
+    and the coefficient blows up at both ends. At the origin there is a clean
+    limit: Φ = O(x), so Φ/(sin x cos x) &#8594; Φ&#8242;(0) and
+  </div>
+  <div>\[ \dot\Pi(0) = 3\Phi'(0)&nbsp;\]</div>
+  <div>
+    That handles the 0/0. It does not make the scheme stable. This form is
+    unstable for every time step I tried. The worst mode grows at a rate of
+    about 0.39/dx near π/2 and 0.1/dx near 0, because that is where 1/(sin x cos
+    x) &#8776; 1/dx. This means that the more we discretize the grid to finer results,
+    the larger the growth rate of this instability near the edges.</div>
+  <div style="text-align: left;"><br /></div>
+  <h4 style="text-align: left;">Why it happens.</h4>
+  <div style="text-align: justify;">The continuous system conserves</div>
+  <div style="text-align: justify;">
+    \[ E=\int \tan^2 x\,(\Pi^2+\Phi^2)\,dx \]
+  </div>
+  <div style="text-align: justify;">but only because of the product rule:</div>
+  <div style="text-align: justify;">
+    \[ (\tan^2 x\,\Phi)' = \tan^2 x \Phi' + (\tan^2 x)' \Phi \]
+  </div>
+  <div style="text-align: justify;">
+    A finite-difference stencil does not obey the product rule. For smooth data
+    the defect is tiny (about 1e-5 or less). For grid-scale oscillations it is
+    of order 1, and those are exactly the modes that grow. Splitting the product
+    feeds energy into them.
+  </div>
+  <div><br /></div>
+  <div>A first attempt is to not split the product. Build g = tan&#178;x&#183;A&#183;e^{-δ}&#183;Φ, differentiate it, and divide afterwards. This converges at order 4 and looks stable on short runs. It isn't. The origin node has energy weight tan&#178;(0) = 0 yet still couples to its neighbours, which leaves a growing mode that only appears after t &#8776; 100 to 300. In the full Einstein system it can look like a collapse before the run turns into NaN. A short run is not a stability test.The actual fix is to absorb tan x into the fields, Θ = tan x&#183;Π and Ψ = tan x&#183;Φ (with an extra factor &#8730;(A e^{-δ}) in the full system). Then</div><div>\[ \dot\Theta = \Psi' + b\Psi,\qquad \dot\Psi = \Theta' - b\Theta,\qquad b=\frac{1}{\sin x\cos x} \]</div><div>The b terms have opposite signs, so they cancel pointwise in the energy and no product rule is needed. The spatial operator conserves the discrete energy exactly, and its eigenvalues are purely imaginary. With this form the runs stay stable for much longer.</div><div><br /></div><div>
+    <h3 style="text-align: left;">The results</h3>
+    <div>We start with a Gaussian initial condition on Π&nbsp;and flat Φ.</div>
+    We let the fields evolve and the pulse reaches&nbsp;x=π/2 at t =&nbsp;π/2 and
+    returns to the origin at t = π, so the dynamics has period π. If the field is intense enough, the
+    backreaction causes the field to focus on an increasingly narrower band of
+    space, eventually collapsing into a black hole. In the simulation below
+    there's the evolution of one such example. We determine that a black hole
+    is formed when the function A goes to 0, with the initial BH horizon at the
+    position where A went to 0.</div><div><p></p>
+    <div class="separator" style="clear: both; text-align: center;">
+      <a href="img/wave.gif" style="margin-left: 1em; margin-right: 1em;"><img alt="Animation of the fields Pi and Phi (top) and the metric functions A and delta (bottom) on x from 0 to pi/2" data-original-height="622" data-original-width="800" height="622" src="img/wave.gif" width="800" style="max-width: 100%; height: auto; box-sizing: border-box;" /></a>
+    </div>
+    <p>
+      In the simulation A doesn't go all the way to 0 because the velocity of
+      the wave goes to 0 and, along with the metric ansatz, &nbsp;our
+      implementation is no longer able to continue the computation. We are
+      choosing A &lt; 1/N as the threshold. The only reason we don't see it
+      go that far in the video is because we only save every M frames and the
+      simulation went for a few more frames before that condition was actually
+      met.
+    </p>
+    <p>
+      For more results, feel free to check the original technical paper linked
+      at the beginning.
+    </p>
+    <p>
+      As a final personal note, I'm proud of myself. After so much time and
+      having this ghost of not knowing what went wrong hovering over me. I feel
+      it brings some kind of closure.<br />
+    </p>
+    <p>
+      I hope this helps anyone that finds themselves with similar problems
+      solving numerically variants of the wave equations in spherical
+      coordinates.
+    </p>
+    <div class="separator" style="clear: both; text-align: center;"><br /></div>
+    <br />
+
+    <p></p>
+  </div>
+</div>
+</div>
+<div class="post-footer">
+Posted October 27, 2026.
+The code is on <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4">GitHub</a> (see the <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4/blob/main/README.md">README</a> and the longer <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4/blob/main/docs/NOTES.md">notes</a>; <a href="wave_notes.html">rendered version</a>).
+</div>
+</article>
+</div>
+</body>
+</html>

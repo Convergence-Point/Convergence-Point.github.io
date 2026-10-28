@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wave equation on AdS4: derivations, lessons and results</title>
+<style>
+  :root { --fg:#1d2330; --muted:#566074; --bg:#fbfbfd; --card:#ffffff; --line:#d9deea; --accent:#1f4fa3; --code:#f1f4fa; --warn:#8a4b00; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--fg); background:var(--bg); }
+  header, main, footer { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem; }
+  header { padding-top: 2.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 1.9rem; margin: 0 0 .4rem; }
+  h2 { font-size: 1.45rem; margin-top: 2.6rem; padding-top: .6rem; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.15rem; margin-top: 1.8rem; }
+  p.lead { color: var(--muted); margin: 0; }
+  nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; padding: 0; margin: 1rem 0 0; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible { outline: 3px solid #f2a900; outline-offset: 2px; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; }
+  code { background: var(--code); padding: .08em .3em; border-radius: 4px; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  math { font-family: "STIX Two Math", "Latin Modern Math", "Cambria Math", "Noto Sans Math", math; font-size: 1.08em; }
+  .eq { background: var(--card); border-left: 4px solid var(--accent); padding: .5rem 1rem; margin: 1rem 0; overflow-x: auto; }
+  .eq math { font-size: 1.15em; }
+  .note, .why, .warn { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .7rem 1rem; margin: 1rem 0; }
+  .warn { border-color: #e0b36b; background: #fff8ec; color: var(--warn); }
+  .why { border-left: 4px solid #2f8f5b; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: var(--card); font-size: .95rem; }
+  caption { text-align: left; font-weight: 600; padding: .3rem 0; }
+  th, td { border: 1px solid var(--line); padding: .4rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #eef2fa; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  figure { margin: 1.2rem 0; }
+  figure img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  figcaption { color: var(--muted); font-size: .9rem; }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .5rem 1rem; margin: .8rem 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  footer { padding: 2rem 1.25rem 3rem; color: var(--muted); font-size: .9rem; }
+  @media (max-width: 40rem) { h1 { font-size: 1.5rem; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Wave equation on AdS<sub>4</sub></h1>
+  <p class="lead">Derivations, lessons learnt and results for the radial scalar field on global AdS<sub>4</sub> (<math><mi>r</mi><mo>=</mo><mi>L</mi><mi>tan</mi><mo>&#x2061;</mo><mi>x</mi></math>), evolved with RK4 in time and a centred finite-difference stencil in space. Source: <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4/blob/main/docs/NOTES.md"><code>docs/NOTES.md</code></a> in the <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4">code repository</a>.</p>
+  <nav aria-label="Contents">
+    <ul>
+      <li><a href="#setup">1. Setup</a></li>
+      <li><a href="#product-rule">2. Stencils and the product rule</a></li>
+      <li><a href="#symmetrized">3. Symmetrized form</a></li>
+      <li><a href="#rhs">4. Symmetrized RHS with weight m</a></li>
+      <li><a href="#symplectic">5. Operators and symplectic structure</a></li>
+      <li><a href="#einstein">6. Einstein-scalar system</a></li>
+      <li><a href="#results">7. Results</a></li>
+      <li><a href="#lessons">8. Lessons learnt</a></li>
+      <li><a href="#usage">9. Programs and arguments</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+
+<section id="setup">
+<h2>1. Setup</h2>
+<p>The fields are <math><mi>Π</mi><mo>=</mo><mover><mi>φ</mi><mo>˙</mo></mover></math> and <math><mi>Φ</mi><mo>=</mo><msup><mi>φ</mi><mo>′</mo></msup></math>, with <math><mi>x</mi><mo>∈</mo><mo>[</mo><mn>0</mn><mo>,</mo><mi>π</mi><mo>/</mo><mn>2</mn><mo>]</mo></math>. A dot is <math><msub><mo>∂</mo><mi>t</mi></msub></math> and a prime is <math><msub><mo>∂</mo><mi>x</mi></msub></math>.</p>
+
+<div class="note">
+<strong>Notation used below.</strong>
+<math><mi>a</mi><mo>≡</mo><mi>tan</mi><mo>&#x2061;</mo><mi>x</mi></math>,
+<math><mi>w</mi><mo>≡</mo><msup><mi>a</mi><mn>2</mn></msup></math>,
+<math><mi>b</mi><mo>≡</mo><mfrac><mn>1</mn><mrow><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi><mi>cos</mi><mo>&#x2061;</mo><mi>x</mi></mrow></mfrac><mo>=</mo><mfrac><msup><mi>a</mi><mo>′</mo></msup><mi>a</mi></mfrac></math>,
+<math><mi>m</mi><mo>≡</mo><mi>A</mi><msup><mi>e</mi><mrow><mo>−</mo><mi>δ</mi></mrow></msup></math> (<math><mi>m</mi><mo>=</mo><mn>1</mn></math> on the fixed AdS background).
+The grid spacing is <math><mi>h</mi><mo>=</mo><mfrac><mrow><mi>π</mi><mo>/</mo><mn>2</mn></mrow><mi>n</mi></mfrac></math> (<code>dr</code> in the code) and the time step is <math><mi mathvariant="normal">Δ</mi><mi>t</mi><mo>=</mo><mi>h</mi><mo>/</mo><mn>2</mn></math>.
+</div>
+
+<p>The linear equations on the fixed AdS background are</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mover><mi>Φ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><msup><mi>Π</mi><mo>′</mo></msup></mtd></mtr>
+  <mtr><mtd><mover><mi>Π</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mfrac><mn>1</mn><mi>w</mi></mfrac><msup><mrow><mo>(</mo><mi>w</mi><mi>Φ</mi><mo>)</mo></mrow><mo>′</mo></msup></mtd></mtr>
+</mtable></math></div>
+
+<h3>Boundary behaviour</h3>
+<ul>
+  <li>At <math><mi>x</mi><mo>=</mo><mn>0</mn></math>: <math><mi>Π</mi></math> is even and <math><mi>Φ</mi></math> is odd.</li>
+  <li>Near <math><mi>x</mi><mo>=</mo><mi>π</mi><mo>/</mo><mn>2</mn></math>: <math><mi>φ</mi><mo>=</mo><mi>f</mi><mo>(</mo><mi>t</mi><mo>)</mo><msup><mi>ρ</mi><mn>3</mn></msup><mo>+</mo><mi>O</mi><mo>(</mo><msup><mi>ρ</mi><mn>5</mn></msup><mo>)</mo></math> with <math><mi>ρ</mi><mo>=</mo><mi>π</mi><mo>/</mo><mn>2</mn><mo>−</mo><mi>x</mi></math>. So <math><mi>Π</mi></math> is odd and <math><mi>Φ</mi></math> is even.</li>
+  <li>Singular limits are filled explicitly. At <math><mi>x</mi><mo>=</mo><mn>0</mn></math>, <math><mi>Φ</mi><mo>/</mo><mi>x</mi><mo>→</mo><msup><mi>Φ</mi><mo>′</mo></msup></math> gives <math><mover><mi>Π</mi><mo>˙</mo></mover><mo>=</mo><mn>3</mn><msup><mi>Φ</mi><mo>′</mo></msup></math>. At <math><mi>x</mi><mo>=</mo><mi>π</mi><mo>/</mo><mn>2</mn></math>, <math><mi>w</mi><mi>Φ</mi></math> has a finite limit, extrapolated from three interior points (even polynomial in <math><mi>ρ</mi></math>).</li>
+</ul>
+
+<h3>Numerical choices</h3>
+<ul>
+  <li><math><mi mathvariant="normal">Δ</mi><mi>t</mi><mo>=</mo><mi>h</mi><mo>/</mo><mn>2</mn></math>. The characteristic speed is 1 in <math><mi>x</mi></math>, so this is stable for the linear problem.</li>
+  <li>Initial data: <math><mi>Π</mi><mo>(</mo><mn>0</mn><mo>,</mo><mi>x</mi><mo>)</mo><mo>=</mo><mfrac><mtext>amplitude</mtext><mi>π</mi></mfrac><msup><mi>e</mi><mrow><mo>−</mo><msup><mi>a</mi><mn>2</mn></msup><mo>/</mo><msup><mi>σ</mi><mn>2</mn></msup></mrow></msup></math>, <math><mi>Φ</mi><mo>(</mo><mn>0</mn><mo>,</mo><mi>x</mi><mo>)</mo><mo>=</mo><mn>0</mn></math>, <math><mi>σ</mi><mo>=</mo><mn>1</mn><mo>/</mo><mn>16</mn></math>.</li>
+  <li>Initial data must be smooth under the boundary reflections. A nonzero <math><msup><mi>Π</mi><mo>′</mo></msup><mo>(</mo><mn>0</mn><mo>)</mo></math>, or a tail at <math><mi>x</mi><mo>=</mo><mi>π</mi><mo>/</mo><mn>2</mn></math>, produces a kink after reflection and lowers the measured order.</li>
+</ul>
+<p>The metric decides the equation. In flat space with <math><mi>r</mi><mo>=</mo><mi>L</mi><mi>a</mi></math> one gets</p>
+<div class="eq"><math display="block"><mover><mi>Π</mi><mo>˙</mo></mover><mo>=</mo><mfrac><mrow><msup><mi>cos</mi><mn>4</mn></msup><mo>&#x2061;</mo><mi>x</mi></mrow><msup><mi>L</mi><mn>2</mn></msup></mfrac><mrow><mo>(</mo><msup><mi>Φ</mi><mo>′</mo></msup><mo>+</mo><mn>2</mn><mi>cot</mi><mo>&#x2061;</mo><mi>x</mi><mspace width="0.2em"/><mi>Φ</mi><mo>)</mo></mrow></math></div>
+<p>whereas in AdS<sub>4</sub> the equation is the one above, with <math><mi>w</mi><mo>=</mo><msup><mi>tan</mi><mn>2</mn></msup><mi>x</mi></math>.</p>
+</section>
+
+<section id="product-rule">
+<h2>2. Stencils and the product rule</h2>
+<p>A finite-difference stencil does not obey the product rule exactly. Take the centred difference <math><msub><mrow><mo>(</mo><mi>D</mi><mi>f</mi><mo>)</mo></mrow><mi>i</mi></msub><mo>=</mo><mfrac><mrow><msub><mi>f</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mi>f</mi><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow><mrow><mn>2</mn><mi>h</mi></mrow></mfrac></math> and apply it to a product:</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><msub><mrow><mo>(</mo><mi>D</mi><mo stretchy="false">(</mo><mi>u</mi><mi>v</mi><mo stretchy="false">)</mo><mo>)</mo></mrow><mi>i</mi></msub></mtd>
+       <mtd><mo>=</mo><mfrac><mrow><msub><mi>u</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><msub><mi>v</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mi>u</mi><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub><msub><mi>v</mi><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow><mrow><mn>2</mn><mi>h</mi></mrow></mfrac></mtd></mtr>
+  <mtr><mtd><msub><mi>u</mi><mi>i</mi></msub><msub><mrow><mo>(</mo><mi>D</mi><mi>v</mi><mo>)</mo></mrow><mi>i</mi></msub><mo>+</mo><msub><mi>v</mi><mi>i</mi></msub><msub><mrow><mo>(</mo><mi>D</mi><mi>u</mi><mo>)</mo></mrow><mi>i</mi></msub></mtd>
+       <mtd><mo>=</mo><mfrac><mrow><msub><mi>u</mi><mi>i</mi></msub><mo>(</mo><msub><mi>v</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mi>v</mi><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>)</mo><mo>+</mo><msub><mi>v</mi><mi>i</mi></msub><mo>(</mo><msub><mi>u</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mi>u</mi><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow><mrow><mn>2</mn><mi>h</mi></mrow></mfrac></mtd></mtr>
+</mtable></math></div>
+<p>These differ. Let <math><msub><mi>a</mi><mo>+</mo></msub><mo>=</mo><msub><mi>u</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mi>u</mi><mi>i</mi></msub></math> and <math><msub><mi>a</mi><mo>−</mo></msub><mo>=</mo><msub><mi>u</mi><mi>i</mi></msub><mo>−</mo><msub><mi>u</mi><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub></math>, with <math><msub><mi>b</mi><mo>±</mo></msub></math> the same differences of <math><mi>v</mi></math>. The defect is</p>
+<div class="eq"><math display="block"><mi>D</mi><mo stretchy="false">(</mo><mi>u</mi><mi>v</mi><mo stretchy="false">)</mo><mo>−</mo><mo>(</mo><mi>u</mi><mi>D</mi><mi>v</mi><mo>+</mo><mi>v</mi><mi>D</mi><mi>u</mi><mo>)</mo><mo>=</mo><mfrac><mrow><msub><mi>a</mi><mo>+</mo></msub><msub><mi>b</mi><mo>+</mo></msub><mo>−</mo><msub><mi>a</mi><mo>−</mo></msub><msub><mi>b</mi><mo>−</mo></msub></mrow><mrow><mn>2</mn><mi>h</mi></mrow></mfrac></math></div>
+<p>a product of two differences divided by <math><mi>h</mi></math>.</p>
+<ul>
+  <li><strong>Smooth data:</strong> the differences are <math><mi>O</mi><mo>(</mo><mi>h</mi><mo>)</mo></math>, so the defect is <math><mi>O</mi><mo>(</mo><msup><mi>h</mi><mn>2</mn></msup><mo>)</mo></math>. It shrinks with the grid, which is why it is invisible on smooth data (1e-5 to 1e-9 relative here).</li>
+  <li><strong>Grid-scale oscillations</strong> such as <math><msup><mrow><mo>(</mo><mo>−</mo><mn>1</mn><mo>)</mo></mrow><mi>i</mi></msup></math>: the differences are as large as the values, and the defect is of order 1 (0.6 to 2.2 measured). These are the modes that grow.</li>
+</ul>
+<div class="why">
+<strong>Why it matters.</strong> The continuous system conserves
+<math><mi>E</mi><mo>=</mo><mo>∫</mo><mi>w</mi><mo>(</mo><msup><mi>Π</mi><mn>2</mn></msup><mo>+</mo><msup><mi>Φ</mi><mn>2</mn></msup><mo>)</mo><mi>d</mi><mi>x</mi></math>,
+because <math><mi>Π</mi><msup><mrow><mo>(</mo><mi>w</mi><mi>Φ</mi><mo>)</mo></mrow><mo>′</mo></msup><mo>+</mo><mi>w</mi><mi>Φ</mi><msup><mi>Π</mi><mo>′</mo></msup><mo>=</mo><msup><mrow><mo>(</mo><mi>w</mi><mi>Π</mi><mi>Φ</mi><mo>)</mo></mrow><mo>′</mo></msup></math>.
+That identity is the product rule. The expanded form <math><msup><mrow><mo>(</mo><mi>w</mi><mi>Φ</mi><mo>)</mo></mrow><mo>′</mo></msup><mo>=</mo><mi>w</mi><msup><mi>Φ</mi><mo>′</mo></msup><mo>+</mo><msup><mi>w</mi><mo>′</mo></msup><mi>Φ</mi></math> assumes it, so the discrete energy is not conserved, and the error feeds the high-frequency modes.
+</div>
+<p>The conservative form <math><mi>D</mi><mo>(</mo><mi>w</mi><mi>Φ</mi><mo>)</mo><mo>/</mo><mi>w</mi></math> never splits the product, so it has no defect. It is better than the expanded form, but it still fails in a subtler way (section 4).</p>
+
+<h3>Why not split the product anyway?</h3>
+<p>You can. The split (expanded) form is consistent: on smooth data its truncation error goes to zero with <math><mi>h</mi></math> at fixed <math><mi>t</mi></math>. What fails is stability, and by the Lax equivalence theorem consistency alone does not give convergence. The explanation takes four steps.</p>
+
+<h4>Step 1: what a stable scheme must preserve</h4>
+<p>The continuous system is <math><mover><mi>Φ</mi><mo>˙</mo></mover><mo>=</mo><mo>∂</mo><mi>Π</mi></math>, <math><mover><mi>Π</mi><mo>˙</mo></mover><mo>=</mo><mo>−</mo><msup><mo>∂</mo><mo>†</mo></msup><mi>Φ</mi></math>, where <math><msup><mo>∂</mo><mo>†</mo></msup><mo>=</mo><mo>−</mo><msup><mi>w</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>∂</mo><mi>w</mi></math> is the adjoint of <math><mo>∂</mo></math> in the <math><mi>w</mi></math>-weighted inner product (section 5). Energy is conserved because the second operator is exactly minus the adjoint of the first.</p>
+<p>A scheme keeps that property if its two discrete operators keep the same relation in the discrete inner product <math><mo>⟨</mo><mi>f</mi><mo>,</mo><mi>g</mi><mo>⟩</mo><mo>=</mo><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>H</mi><mi>i</mi></msub><msub><mi>w</mi><mi>i</mi></msub><msub><mi>f</mi><mi>i</mi></msub><msub><mi>g</mi><mi>i</mi></msub></math>. With summation by parts (<math><msup><mi>D</mi><mi>T</mi></msup><mi>H</mi><mo>=</mo><mo>−</mo><mi>H</mi><mi>D</mi></math>), the discrete adjoint of <math><mi>D</mi></math> is <math><mo>−</mo><msup><mi>W</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>D</mi><mi>W</mi></math>, with <math><mi>W</mi><mo>=</mo><mi>diag</mi><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></math>. So the <math><mover><mi>Π</mi><mo>˙</mo></mover></math> operator that conserves energy is <math><msup><mi>W</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>D</mi><mi>W</mi></math>, which is the conservative form <math><mi>D</mi><mo>(</mo><mi>w</mi><mi>Φ</mi><mo>)</mo><mo>/</mo><mi>w</mi></math>. The split form uses <math><mi>D</mi><mo>+</mo><mn>2</mn><mi>B</mi></math> instead, with <math><mi>B</mi><mo>=</mo><mi>diag</mi><mo>(</mo><msub><mi>b</mi><mi>i</mi></msub><mo>)</mo></math> and <math><msup><mi>w</mi><mo>′</mo></msup><mo>/</mo><mi>w</mi><mo>=</mo><mn>2</mn><mi>b</mi></math>. (The conservative form has its own problem at the origin, where <math><msub><mi>w</mi><mn>0</mn></msub><mo>=</mo><mn>0</mn></math> makes the inner product degenerate; see section 4.)</p>
+
+<h4>Step 2: the mismatch of the split form</h4>
+<p>Write the stencil as <math><msub><mrow><mo>(</mo><mi>D</mi><mi>f</mi><mo>)</mo></mrow><mi>i</mi></msub><mo>=</mo><msub><mo>∑</mo><mi>k</mi></msub><msub><mi>d</mi><mi>k</mi></msub><msub><mi>f</mi><mrow><mi>i</mi><mo>+</mo><mi>k</mi></mrow></msub></math>. The amount by which the split operator misses the energy-conserving one is</p>
+<div class="eq"><math display="block">
+<mi>R</mi><mo>≡</mo><mo>(</mo><mi>D</mi><mo>+</mo><mn>2</mn><mi>B</mi><mo>)</mo><mo>−</mo><msup><mi>W</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>D</mi><mi>W</mi><mo>,</mo><mspace width="2em"/>
+<msub><mrow><mo>(</mo><mi>R</mi><mi>f</mi><mo>)</mo></mrow><mi>i</mi></msub><mo>=</mo><mn>2</mn><msub><mi>b</mi><mi>i</mi></msub><msub><mi>f</mi><mi>i</mi></msub><mo>+</mo><munder><mo>∑</mo><mi>k</mi></munder><msub><mi>d</mi><mi>k</mi></msub><mrow><mo>(</mo><mn>1</mn><mo>−</mo><mfrac><msub><mi>w</mi><mrow><mi>i</mi><mo>+</mo><mi>k</mi></mrow></msub><msub><mi>w</mi><mi>i</mi></msub></mfrac><mo>)</mo></mrow><msub><mi>f</mi><mrow><mi>i</mi><mo>+</mo><mi>k</mi></mrow></msub></math></div>
+<p>A concrete case makes this readable. Take the 2-point stencil, <math><msub><mi>d</mi><mrow><mo>±</mo><mn>1</mn></mrow></msub><mo>=</mo><mo>±</mo><mn>1</mn><mo>/</mo><mo>(</mo><mn>2</mn><mi>h</mi><mo>)</mo></math>, and a weight that varies slowly, <math><msub><mi>w</mi><mrow><mi>i</mi><mo>±</mo><mn>1</mn></mrow></msub><mo>/</mo><msub><mi>w</mi><mi>i</mi></msub><mo>≈</mo><mn>1</mn><mo>±</mo><mn>2</mn><mi>h</mi><msub><mi>b</mi><mi>i</mi></msub></math>. Then the sum collapses to</p>
+<div class="eq"><math display="block"><msub><mrow><mo>(</mo><mi>R</mi><mi>f</mi><mo>)</mo></mrow><mi>i</mi></msub><mo>=</mo><mn>2</mn><msub><mi>b</mi><mi>i</mi></msub><msub><mi>f</mi><mi>i</mi></msub><mo>−</mo><msub><mi>b</mi><mi>i</mi></msub><mo>(</mo><msub><mi>f</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>f</mi><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>)</mo><mo>=</mo><mo>−</mo><msub><mi>b</mi><mi>i</mi></msub><mo>(</mo><msub><mi>f</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><mn>2</mn><msub><mi>f</mi><mi>i</mi></msub><mo>+</mo><msub><mi>f</mi><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>)</mo></math></div>
+<p>So the mismatch is <math><mi>b</mi></math> times a second difference.</p>
+<ul>
+  <li>For smooth <math><mi>f</mi></math> the second difference is <math><msup><mi>h</mi><mn>2</mn></msup><msup><mi>f</mi><mo>″</mo></msup></math>, so <math><mi>R</mi><mi>f</mi></math> is negligible. This is why the split form looks fine on resolved data.</li>
+  <li>For the sawtooth <math><msub><mi>f</mi><mi>i</mi></msub><mo>=</mo><msup><mrow><mo>(</mo><mo>−</mo><mn>1</mn><mo>)</mo></mrow><mi>i</mi></msup></math> the second difference is <math><mo>−</mo><mn>4</mn><msub><mi>f</mi><mi>i</mi></msub></math>, so <math><mi>R</mi><mi>f</mi><mo>=</mo><mn>4</mn><mi>b</mi><mi>f</mi></math>: not small at all. This is the product-rule defect of the previous subsection, now seen as an operator.</li>
+</ul>
+<p>The code uses wider stencils, so the coefficients differ, but the structure is the same: a smooth part that cancels and a grid-scale part that does not. The 2-point form is an illustration, not a calculation for <code>derP</code>.</p>
+
+<h4>Step 3: from mismatch to growth, and why it scales like 1/h</h4>
+<p>In the weighted inner product the symmetric part of the system matrix is <math><mfrac><mn>1</mn><mn>2</mn></mfrac><mfenced open="(" close=")"><mtable><mtr><mtd><mn>0</mn></mtd><mtd><mi>R</mi></mtd></mtr><mtr><mtd><msup><mi>R</mi><mo>†</mo></msup></mtd><mtd><mn>0</mn></mtd></mtr></mtable></mfenced></math>. The real part of any eigenvalue is at most the largest eigenvalue of the symmetric part, which is <math><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>‖</mo><mi>R</mi><mo>‖</mo></math>. Energy-conserving schemes have <math><mi>R</mi><mo>=</mo><mn>0</mn></math>; here the growth is limited by the size of <math><mi>R</mi></math>, which is of order <math><mi>b</mi></math>.</p>
+<p>The key point is the size of <math><mi>b</mi><mo>=</mo><mn>1</mn><mo>/</mo><mo>(</mo><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi><mi>cos</mi><mo>&#x2061;</mo><mi>x</mi><mo>)</mo></math>:</p>
+<ul>
+  <li>In the interior <math><mi>b</mi><mo>=</mo><mi>O</mi><mo>(</mo><mn>1</mn><mo>)</mo></math>, so the mismatch gives at most an <math><mi>h</mi></math>-independent growth rate.</li>
+  <li>At the first cells next to the ends, <math><mi>b</mi><mo>≈</mo><mn>1</mn><mo>/</mo><mi>x</mi><mo>≈</mo><mn>1</mn><mo>/</mo><mi>h</mi></math> at <math><mi>x</mi><mo>=</mo><mi>h</mi></math> and <math><mi>b</mi><mo>≈</mo><mn>1</mn><mo>/</mo><mi>ρ</mi><mo>≈</mo><mn>1</mn><mo>/</mo><mi>h</mi></math> at <math><mi>ρ</mi><mo>=</mo><mi>h</mi></math>. The growth rate can be as large as <math><mi>O</mi><mo>(</mo><mn>1</mn><mo>/</mo><mi>h</mi><mo>)</mo></math>.</li>
+</ul>
+<p>This agrees with what was measured: growth rates of about <math><mn>0.1</mn><mo>/</mo><mi>h</mi></math> near 0 and <math><mn>0.39</mn><mo>/</mo><mi>h</mi></math> near <math><mi>π</mi><mo>/</mo><mn>2</mn></math>, localized at the ends and growing as the grid is refined. Both are fractions of <math><mn>1</mn><mo>/</mo><mi>h</mi></math>, consistent with an upper bound of order <math><mi>b</mi></math>. It also explains why patching the quotient near the ends (l'Hôpital, hybrid forms) only moved the growth: it changes <math><mi>b</mi></math> there but leaves the structure <math><mi>R</mi><mo>≠</mo><mn>0</mn></math>. As a rough scale, noise at <math><msup><mn>10</mn><mrow><mo>−</mo><mn>16</mn></mrow></msup></math> growing at <math><mn>0.39</mn><mo>/</mo><mi>h</mi></math> reaches order 1 after <math><mi>t</mi><mo>≈</mo><mi>ln</mi><mo>(</mo><msup><mn>10</mn><mn>16</mn></msup><mo>)</mo><mi>h</mi><mo>/</mo><mn>0.39</mn><mo>≈</mo><mn>0.3</mn></math> for <math><mi>n</mi><mo>=</mo><mn>500</mn></math>. (This is arithmetic on the measured rate, not a separate run. The decomposition above is my own hand derivation; I did not compute <math><mi>R</mi></math> numerically for the code's stencils.)</p>
+
+<h4>Where b comes from, and why it limits stability</h4>
+<p>The function <math><mi>b</mi></math> was defined as the logarithmic derivative of <math><mi>a</mi><mo>=</mo><mi>tan</mi><mo>&#x2061;</mo><mi>x</mi></math>:</p>
+<div class="eq"><math display="block"><mi>b</mi><mo>=</mo><mfrac><msup><mi>a</mi><mo>′</mo></msup><mi>a</mi></mfrac><mo>=</mo><mfrac><mrow><mn>1</mn><mo>/</mo><msup><mi>cos</mi><mn>2</mn></msup><mo>&#x2061;</mo><mi>x</mi></mrow><mrow><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi><mo>/</mo><mi>cos</mi><mo>&#x2061;</mo><mi>x</mi></mrow></mfrac><mo>=</mo><mfrac><mn>1</mn><mrow><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi><mspace width="0.15em"/><mi>cos</mi><mo>&#x2061;</mo><mi>x</mi></mrow></mfrac><mo>=</mo><mfrac><mn>2</mn><mrow><mi>sin</mi><mo>&#x2061;</mo><mn>2</mn><mi>x</mi></mrow></mfrac></math></div>
+<p>Because <math><mi>w</mi><mo>=</mo><msup><mi>a</mi><mn>2</mn></msup></math>, the weight's logarithmic derivative is <math><msup><mi>w</mi><mo>′</mo></msup><mo>/</mo><mi>w</mi><mo>=</mo><mn>2</mn><msup><mi>a</mi><mo>′</mo></msup><mo>/</mo><mi>a</mi><mo>=</mo><mn>2</mn><mi>b</mi></math>. That is where the term <math><mn>2</mn><mi>b</mi><mi>Φ</mi></math> comes from when <math><msup><mrow><mo>(</mo><mi>w</mi><mi>Φ</mi><mo>)</mo></mrow><mo>′</mo></msup><mo>/</mo><mi>w</mi></math> is expanded into <math><msup><mi>Φ</mi><mo>′</mo></msup><mo>+</mo><mo>(</mo><msup><mi>w</mi><mo>′</mo></msup><mo>/</mo><mi>w</mi><mo>)</mo><mi>Φ</mi></math>.</p>
+
+<p><strong>Meaning.</strong> <math><mi>b</mi></math> is half the relative rate of change of the weight. It says how much <math><mi>w</mi></math> changes from one point to the next, as a fraction of <math><mi>w</mi></math> itself.</p>
+<table>
+  <caption>Size of <math><mi>b</mi></math></caption>
+  <thead><tr><th scope="col">Location</th><th scope="col">Local form of <math><mi>w</mi></math></th><th scope="col"><math><mi>b</mi></math></th></tr></thead>
+  <tbody>
+    <tr><td>Next to the origin, <math><mi>x</mi><mo>=</mo><mi>h</mi></math></td><td><math><mi>w</mi><mo>≈</mo><msup><mi>x</mi><mn>2</mn></msup></math></td><td><math><mi>b</mi><mo>≈</mo><mn>1</mn><mo>/</mo><mi>x</mi><mo>=</mo><mn>1</mn><mo>/</mo><mi>h</mi></math></td></tr>
+    <tr><td>Middle, <math><mi>x</mi><mo>=</mo><mi>π</mi><mo>/</mo><mn>4</mn></math></td><td><math><mi>w</mi><mo>=</mo><mn>1</mn></math></td><td><math><mi>b</mi><mo>=</mo><mn>2</mn></math></td></tr>
+    <tr><td>Next to <math><mi>π</mi><mo>/</mo><mn>2</mn></math>, <math><mi>ρ</mi><mo>=</mo><mi>π</mi><mo>/</mo><mn>2</mn><mo>−</mo><mi>x</mi><mo>=</mo><mi>h</mi></math></td><td><math><mi>w</mi><mo>≈</mo><mn>1</mn><mo>/</mo><msup><mi>ρ</mi><mn>2</mn></msup></math></td><td><math><mi>b</mi><mo>≈</mo><mn>1</mn><mo>/</mo><mi>ρ</mi><mo>=</mo><mn>1</mn><mo>/</mo><mi>h</mi></math></td></tr>
+  </tbody>
+</table>
+<p>For <math><mi>n</mi><mo>=</mo><mn>500</mn></math> one has <math><mn>1</mn><mo>/</mo><mi>h</mi><mo>≈</mo><mn>318</mn></math>, against <math><mi>b</mi><mo>=</mo><mn>2</mn></math> in the middle.</p>
+
+<p><strong>Why it limits stability.</strong> In the 2-point illustration of step 2, the mismatch is <math><mo>−</mo><mi>b</mi></math> times a second difference, so <math><mi>b</mi></math> is the coefficient of the term that does not cancel. The possible growth rate therefore follows <math><mi>b</mi></math>: of order 1 in the interior, and of order <math><mn>1</mn><mo>/</mo><mi>h</mi></math> at the first cells next to the ends. This is a heuristic bound from a hand calculation, not a proof of the exact rate.</p>
+<p>There is a second reason the end cells are special. The simplification in step 2 used <math><msub><mi>w</mi><mrow><mi>i</mi><mo>±</mo><mn>1</mn></mrow></msub><mo>/</mo><msub><mi>w</mi><mi>i</mi></msub><mo>≈</mo><mn>1</mn><mo>±</mo><mn>2</mn><mi>h</mi><mi>b</mi></math>, which holds only when <math><mi>h</mi><mi>b</mi></math> is small. At the first cells <math><mi>h</mi><mi>b</mi><mo>≈</mo><mn>1</mn></math>, so the weight changes by an order-1 factor between neighbouring points. For example, at <math><mi>i</mi><mo>=</mo><mn>1</mn></math> the ratio is <math><msub><mi>w</mi><mn>2</mn></msub><mo>/</mo><msub><mi>w</mi><mn>1</mn></msub><mo>≈</mo><msup><mi>tan</mi><mn>2</mn></msup><mo>(</mo><mn>2</mn><mi>h</mi><mo>)</mo><mo>/</mo><msup><mi>tan</mi><mn>2</mn></msup><mo>(</mo><mi>h</mi><mo>)</mo><mo>≈</mo><mn>4</mn></math>. The stencil cannot treat the weight as slowly varying there, which is why the instability sits at the ends and worsens as <math><mi>h</mi></math> shrinks.</p>
+<p>This matches the measurements: the growth rates of about <math><mn>0.1</mn><mo>/</mo><mi>h</mi></math> near 0 and <math><mn>0.39</mn><mo>/</mo><mi>h</mi></math> near <math><mi>π</mi><mo>/</mo><mn>2</mn></math> are fractions of the <math><mn>1</mn><mo>/</mo><mi>h</mi></math> that <math><mi>b</mi></math> reaches at the first cells.</p>
+
+<h4>The growth rate</h4>
+<p>A mode of the semi-discrete operator with eigenvalue <math><mi>λ</mi></math> grows in amplitude like <math><msup><mi>e</mi><mrow><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi><mspace width="0.2em"/><mi>t</mi></mrow></msup></math>, so the growth rate is the largest <math><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math> of the operator. The values below are the README's measurements (eigenvalues of the operator built as a matrix). The last two columns are my arithmetic on those values for <math><mi>n</mi><mo>=</mo><mn>500</mn></math>, <math><mi>h</mi><mo>≈</mo><mn>0.00314</mn></math>, taking noise at <math><msup><mn>10</mn><mrow><mo>−</mo><mn>16</mn></mrow></msup></math> and the time <math><mi>t</mi><mo>=</mo><mi>ln</mi><mo>(</mo><msup><mn>10</mn><mn>16</mn></msup><mo>)</mo><mo>/</mo><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi><mo>≈</mo><mn>36.8</mn><mo>/</mo><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math> for it to reach order 1.</p>
+<table>
+  <caption>Growth rate <math><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math> of the three spatial operators</caption>
+  <thead><tr>
+    <th scope="col">Form</th>
+    <th scope="col"><math><mi>max</mi><mspace width="0.2em"/><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math> (measured)</th>
+    <th scope="col">At <math><mi>n</mi><mo>=</mo><mn>500</mn></math>, per unit time</th>
+    <th scope="col">e-folding time</th>
+    <th scope="col">Time for <math><msup><mn>10</mn><mrow><mo>−</mo><mn>16</mn></mrow></msup><mo>→</mo><mn>1</mn></math></th>
+  </tr></thead>
+  <tbody>
+    <tr><td>Expanded, near <math><mi>π</mi><mo>/</mo><mn>2</mn></math></td><td class="num"><math><mo>≈</mo><mn>0.39</mn><mo>/</mo><mi>h</mi></math></td><td class="num">≈ 124</td><td class="num">≈ 0.008</td><td class="num">≈ 0.3</td></tr>
+    <tr><td>Expanded, near 0</td><td class="num"><math><mo>≈</mo><mn>0.1</mn><mo>/</mo><mi>h</mi></math></td><td class="num">≈ 32</td><td class="num">≈ 0.03</td><td class="num">≈ 1.2</td></tr>
+    <tr><td>Conservative</td><td class="num">0.20 to 0.21, independent of <math><mi>n</mi></math> (measured for <math><mi>n</mi><mo>=</mo><mn>100</mn><mo>…</mo><mn>400</mn></math>)</td><td class="num">≈ 0.21</td><td class="num">≈ 4.8</td><td class="num">≈ 175</td></tr>
+    <tr><td>Symmetrized</td><td class="num"><math><mo>≤</mo><mn>7</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></math> (roundoff)</td><td class="num">none</td><td class="num">none</td><td class="num">none: factor at most <math><mn>1</mn><mo>+</mo><mn>3</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></math> over <math><mi>T</mi><mo>=</mo><mn>400</mn></math></td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>The expanded form grows like <math><mn>1</mn><mo>/</mo><mi>h</mi></math>.</strong> The rate is proportional to the grid refinement, so errors grow faster the finer the grid. The blow-up time is of order <math><mi>h</mi></math>: about 0.3 time units for <math><mi>n</mi><mo>=</mo><mn>500</mn></math>.</li>
+  <li><strong>In steps, the blow-up count does not depend on <math><mi>n</mi></math>.</strong> With <math><mi mathvariant="normal">Δ</mi><mi>t</mi><mo>=</mo><mi>h</mi><mo>/</mo><mn>2</mn></math>, the growth per step near <math><mi>π</mi><mo>/</mo><mn>2</mn></math> is <math><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi><mspace width="0.2em"/><mi mathvariant="normal">Δ</mi><mi>t</mi><mo>≈</mo><mn>0.39</mn><mo>/</mo><mn>2</mn><mo>≈</mo><mn>0.2</mn></math>, a factor of about 1.2 per step. Reaching <math><msup><mn>10</mn><mn>16</mn></msup></math> takes about <math><mn>36.8</mn><mo>/</mo><mn>0.195</mn><mo>≈</mo><mn>190</mn></math> steps at any resolution. This treats the RK4 amplification as <math><msup><mi>e</mi><mrow><mi>Re</mi><mspace width="0.2em"/><mi>z</mi></mrow></msup></math>, which is approximate for the larger imaginary parts.</li>
+  <li><strong>The conservative form has a much smaller rate that does not shrink with <math><mi>h</mi></math>.</strong> A rate of 0.2 multiplies roundoff by about <math><msup><mn>10</mn><mn>16</mn></msup></math> after <math><mi>t</mi><mo>≈</mo><mn>180</mn></math>, which matches the README's observation that runs look stable until <math><mi>t</mi></math> of 100 to 300.</li>
+  <li><strong>The symmetrized form has no growth.</strong> Its eigenvalue real parts are at the roundoff floor of the eigenvalue computation.</li>
+</ul>
+<p>These times are estimates. They assume the noise sits in the unstable eigenvector at the roundoff level and neglect the transient before the unstable mode dominates. The rates themselves are the README's measured values; I did not recompute the eigenvalues for this page. The bound of order <math><mi>b</mi><mo>≈</mo><mn>1</mn><mo>/</mo><mi>h</mi></math> from the previous subsection is consistent with the expanded-form rates, since 0.39 and 0.1 are below it.</p>
+
+<h4>Step 4: the time stepper cannot fix it</h4>
+<p>The instability belongs to the spatial operator. RK4 integrates <math><msup><mi>e</mi><mrow><mi>λ</mi><mi>t</mi></mrow></msup></math> accurately, so if <math><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi><mo>&gt;</mo><mn>0</mn></math> it reproduces the growth. Reducing <math><mi mathvariant="normal">Δ</mi><mi>t</mi></math> does not move the eigenvalues, which is why the expanded form blew up for every time step.</p>
+
+<h4>A split that works</h4>
+<p>Let <math><mi>M</mi></math> be the diagonal matrix of a coefficient <math><mi>m</mi></math>. In the inner product above, the adjoint of the one-sided operator <math><mi>M</mi><mi>D</mi></math> is <math><mo>−</mo><mi>D</mi><mi>M</mi></math>, not <math><mo>−</mo><mi>M</mi><mi>D</mi></math>. So <math><mi>M</mi><mi>D</mi></math> alone is not skew. The average is:</p>
+<div class="eq"><math display="block"><msup><mrow><mo>(</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>(</mo><mi>M</mi><mi>D</mi><mo>+</mo><mi>D</mi><mi>M</mi><mo>)</mo><mo>)</mo></mrow><mo>†</mo></msup><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>(</mo><mo>−</mo><mi>D</mi><mi>M</mi><mo>−</mo><mi>M</mi><mi>D</mi><mo>)</mo><mo>=</mo><mo>−</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>(</mo><mi>M</mi><mi>D</mi><mo>+</mo><mi>D</mi><mi>M</mi><mo>)</mo></math></div>
+<p>This is the operator <math><mi mathvariant="script">S</mi></math> of section 4. The proof uses only that <math><mi>D</mi></math> is skew in <math><mi>H</mi></math> and that <math><mi>M</mi></math> is diagonal. It never uses the product rule, which is why it works. The product rule would be the statement <math><mi>D</mi><mi>M</mi><mo>−</mo><mi>M</mi><mi>D</mi><mo>=</mo><mi>diag</mi><mo>(</mo><mi>D</mi><mi>m</mi><mo>)</mo></math>, and that is false for a stencil on grid-scale data. In the literature this is the skew-symmetric (split) form.</p>
+
+<h4>An alternative: add dissipation</h4>
+<p>One could keep the expanded form and add Kreiss-Oliger dissipation with a coefficient large enough to beat the growth near the ends. This was not tried in this code. It adds a tuning parameter and damps real high-frequency content. It also hides the symptom instead of fixing it, so the eigenvalue test would no longer show whether the operator itself is correct.</p>
+
+<h3>Why differentiating the product first works</h3>
+<p>The conservative form applies the stencil to the product and divides afterwards: <math><mover><mi>Π</mi><mo>˙</mo></mover><mo>=</mo><msup><mi>W</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>D</mi><mo>(</mo><mi>W</mi><mi>Φ</mi><mo>)</mo></math>, <math><mover><mi>Φ</mi><mo>˙</mo></mover><mo>=</mo><mi>D</mi><mi>Π</mi></math>. It works because the energy proof for this form never needs the product rule.</p>
+
+<h4>The energy balance</h4>
+<p>Let <math><mi>q</mi><mo>=</mo><mi>W</mi><mi>Φ</mi></math> be the grid function that the stencil acts on, and use the discrete energy <math><mi>E</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>H</mi><mi>i</mi></msub><msub><mi>w</mi><mi>i</mi></msub><mo>(</mo><msubsup><mi>Π</mi><mi>i</mi><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>Φ</mi><mi>i</mi><mn>2</mn></msubsup><mo>)</mo></math>. Then</p>
+<div class="eq"><math display="block">
+<mfrac><mrow><mi>d</mi><mi>E</mi></mrow><mrow><mi>d</mi><mi>t</mi></mrow></mfrac>
+<mo>=</mo><msup><mi>Π</mi><mi>T</mi></msup><mi>H</mi><mi>W</mi><mspace width="0.2em"/><msup><mi>W</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>D</mi><mi>q</mi>
+<mo>+</mo><msup><mi>Φ</mi><mi>T</mi></msup><mi>H</mi><mi>W</mi><mspace width="0.2em"/><mi>D</mi><mi>Π</mi>
+<mo>=</mo><msup><mi>Π</mi><mi>T</mi></msup><mi>H</mi><mi>D</mi><mi>q</mi><mo>+</mo><msup><mi>q</mi><mi>T</mi></msup><mi>H</mi><mi>D</mi><mi>Π</mi>
+<mo>=</mo><msup><mi>Π</mi><mi>T</mi></msup><mi>H</mi><mi>D</mi><mi>q</mi><mo>−</mo><msup><mrow><mo>(</mo><mi>D</mi><mi>q</mi><mo>)</mo></mrow><mi>T</mi></msup><mi>H</mi><mi>Π</mi>
+<mo>=</mo><mn>0</mn></math></div>
+<p>In the first step the factor <math><msup><mi>W</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></math> from the equation cancels the weight in the energy, and <math><msup><mi>Φ</mi><mi>T</mi></msup><mi>H</mi><mi>W</mi><mo>=</mo><msup><mi>q</mi><mi>T</mi></msup><mi>H</mi></math> because <math><mi>H</mi></math> and <math><mi>W</mi></math> are diagonal. The last step uses only <math><mi>H</mi><mi>D</mi><mo>=</mo><mo>−</mo><msup><mi>D</mi><mi>T</mi></msup><mi>H</mi></math>, summation by parts. Nothing is differentiated except <math><mi>q</mi></math>, and the singular coefficient <math><mi>b</mi></math> never appears.</p>
+
+<h4>Pointwise rule versus summed rule</h4>
+<p>This is the distinction that matters. The two forms need different properties of the stencil.</p>
+<table>
+  <caption>What the energy proof requires of <math><mi>D</mi></math></caption>
+  <thead><tr><th scope="col"></th><th scope="col">Split form</th><th scope="col">Conservative form</th></tr></thead>
+  <tbody>
+    <tr><th scope="row">Property needed</th><td>Leibniz rule at every point: <math><mi>D</mi><mo>(</mo><mi>w</mi><mi>Φ</mi><mo>)</mo><mo>=</mo><mi>w</mi><mi>D</mi><mi>Φ</mi><mo>+</mo><mo>(</mo><mi>D</mi><mi>w</mi><mo>)</mo><mi>Φ</mi></math></td><td>Integration by parts, a summed statement: <math><msup><mi>u</mi><mi>T</mi></msup><mi>H</mi><mi>D</mi><mi>v</mi><mo>+</mo><msup><mi>v</mi><mi>T</mi></msup><mi>H</mi><mi>D</mi><mi>u</mi><mo>=</mo><mn>0</mn></math></td></tr>
+    <tr><th scope="row">Does a stencil satisfy it?</th><td>No. The commutator <math><mo>[</mo><mi>D</mi><mo>,</mo><mi>W</mi><mo>]</mo></math> is not <math><mi>diag</mi><mo>(</mo><mi>D</mi><mi>w</mi><mo>)</mo></math> on grid-scale data.</td><td>Yes, exactly, for an antisymmetric stencil with the reflection rules at the ends.</td></tr>
+    <tr><th scope="row">Role of <math><mi>w</mi></math></th><td>Differentiated: the term <math><mn>2</mn><mi>b</mi><mi>Φ</mi></math> stands for <math><msup><mi>w</mi><mo>′</mo></msup><mi>Φ</mi><mo>/</mo><mi>w</mi></math>.</td><td>A diagonal factor on both sides of <math><mi>D</mi></math>. Never differentiated.</td></tr>
+    <tr><th scope="row">Remaining mismatch <math><mi>R</mi></math></th><td>Of order <math><mi>b</mi></math> times a second difference.</td><td>Zero, except at a node where <math><mi>w</mi><mo>=</mo><mn>0</mn></math> (below).</td></tr>
+  </tbody>
+</table>
+<p>Integration by parts is a global identity: it only needs <math><mi>D</mi></math> to be antisymmetric in <math><mi>H</mi></math>, and a centred stencil with the right reflection rules is. The Leibniz rule is a local identity, and a stencil cannot satisfy it on data the grid barely resolves. The conservative form arranges the algebra so that only the first is used. This is the same statement as <math><msub><mi>R</mi><mtext>conservative</mtext></msub><mo>=</mo><mn>0</mn></math> in step 2 of the previous subsection, since the conservative operator <em>is</em> <math><msup><mi>W</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>D</mi><mi>W</mi></math>.</p>
+
+<h4>Why this removes the 1/h growth</h4>
+<p>The expanded form's growth came from <math><mi>b</mi><mo>≈</mo><mn>1</mn><mo>/</mo><mi>h</mi></math> multiplying a non-cancelling term at the first cells. In the conservative form <math><mi>b</mi></math> does not appear, so that mechanism is gone. The measured growth rate drops from about <math><mn>0.39</mn><mo>/</mo><mi>h</mi></math> to about 0.2, which no longer grows as the grid is refined (see the table of growth rates above).</p>
+
+<h4>What it still misses: the origin node</h4>
+<p>The identity above requires the <math><mover><mi>Π</mi><mo>˙</mo></mover></math> equation to read <math><msup><mi>W</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>D</mi><mi>q</mi></math> at every node, including <math><mi>i</mi><mo>=</mo><mn>0</mn></math>. At that node <math><msub><mi>w</mi><mn>0</mn></msub><mo>=</mo><mn>0</mn></math>, so the formula is <math><mn>0</mn><mo>/</mo><mn>0</mn></math> and the code substitutes the limit <math><msub><mover><mi>Π</mi><mo>˙</mo></mover><mn>0</mn></msub><mo>=</mo><mn>3</mn><msup><mi>Φ</mi><mo>′</mo></msup></math>. That has two consequences:</p>
+<ul>
+  <li>The balancing term <math><msub><mi>H</mi><mn>0</mn></msub><msub><mi>Π</mi><mn>0</mn></msub><msub><mrow><mo>(</mo><mi>D</mi><mi>q</mi><mo>)</mo></mrow><mn>0</mn></msub></math> that the cancellation needs is not what the energy sees. In the energy this node carries the weight <math><msub><mi>H</mi><mn>0</mn></msub><msub><mi>w</mi><mn>0</mn></msub><mo>=</mo><mn>0</mn></math>, so the substituted equation contributes nothing.</li>
+  <li>Meanwhile <math><msub><mi>Π</mi><mn>0</mn></msub></math> still enters <math><msub><mover><mi>Φ</mi><mo>˙</mo></mover><mn>1</mn></msub></math> and <math><msub><mover><mi>Φ</mi><mo>˙</mo></mover><mn>2</mn></msub></math> through the stencil. That coupling has no partner term, so the cancellation fails there.</li>
+</ul>
+<p>This is the unbalanced coupling at <math><mi>i</mi><mo>=</mo><mn>1</mn></math> described in section 4, and it is why the conservative form still grows at rate 0.2 although the product rule is no longer the problem. The symmetrized form of section 4 removes it by absorbing the weight into the field: <math><mi>Θ</mi><mo>=</mo><mi>p</mi><mi>a</mi><mi>Π</mi></math> vanishes identically at the origin, so <math><msub><mi>Θ</mi><mn>0</mn></msub><mo>=</mo><mn>0</mn></math> and there is nothing left to couple. The derivation of this subsection is a hand calculation; I did not compute the node-0 residual numerically.</p>
+</section>
+
+<section id="symmetrized">
+<h2>3. Symmetrized form (<code>adsDivergenceExpanded</code>, <code>adsDPiExpanded</code>)</h2>
+
+<h3>The problem</h3>
+<p>The plain expanded equation</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mover><mi>Π</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><msup><mi>Φ</mi><mo>′</mo></msup><mo>+</mo><mn>2</mn><mi>b</mi><mi>Φ</mi></mtd></mtr>
+  <mtr><mtd><mover><mi>Φ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><msup><mi>Π</mi><mo>′</mo></msup></mtd></mtr>
+</mtable></math></div>
+<p>is unstable with a centred stencil for every time step. The growth rate is about <math><mn>0.39</mn><mo>/</mo><mi>h</mi></math> near <math><mi>x</mi><mo>=</mo><mi>π</mi><mo>/</mo><mn>2</mn></math> and <math><mn>0.1</mn><mo>/</mo><mi>h</mi></math> near <math><mi>x</mi><mo>=</mo><mn>0</mn></math> (measured from the eigenvalues of the semi-discrete operator), so a finer grid blows up sooner. Rewriting <math><mi>b</mi><mi>Φ</mi></math> with l'Hôpital near the ends lowers the rate near the origin but never removes it, and near <math><mi>π</mi><mo>/</mo><mn>2</mn></math> it makes it worse.</p>
+
+<h3>The cure</h3>
+<p>Absorb <math><mi>a</mi></math> into the fields: <math><mi>Θ</mi><mo>=</mo><mi>a</mi><mi>Π</mi></math>, <math><mi>Ψ</mi><mo>=</mo><mi>a</mi><mi>Φ</mi></math>. Since <math><msup><mi>a</mi><mo>′</mo></msup><mo>/</mo><mi>a</mi><mo>=</mo><mi>b</mi></math>, the system becomes</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mover><mi>Θ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><msup><mi>Ψ</mi><mo>′</mo></msup><mo>+</mo><mi>b</mi><mi>Ψ</mi></mtd></mtr>
+  <mtr><mtd><mover><mi>Ψ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><msup><mi>Θ</mi><mo>′</mo></msup><mo>−</mo><mi>b</mi><mi>Θ</mi></mtd></mtr>
+</mtable></math></div>
+<p>The <math><mi>b</mi></math> terms have opposite signs and cancel pointwise in <math><mi>Θ</mi><mover><mi>Ψ</mi><mo>˙</mo></mover><mo>+</mo><mi>Ψ</mi><mover><mi>Θ</mi><mo>˙</mo></mover></math>, so no product rule is needed. With the reflection rules used in <code>derP</code>, the two stencils satisfy summation by parts,</p>
+<div class="eq"><math display="block"><mi>H</mi><msub><mi>D</mi><mi>Θ</mi></msub><mo>+</mo><msubsup><mi>D</mi><mi>Ψ</mi><mi>T</mi></msubsup><mi>H</mi><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><mi>H</mi><mo>=</mo><mi>diag</mi><mo>(</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>,</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mn>1</mn><mo>,</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>)</mo></math></div>
+<p>and <math><mi>E</mi><mo>=</mo><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>H</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>(</mo><msubsup><mi>Θ</mi><mi>i</mi><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>Ψ</mi><mi>i</mi><mn>2</mn></msubsup><mo>)</mo></math> is conserved exactly by the semi-discrete system. Its eigenvalues are purely imaginary (largest real part 1e-14 for <math><mi>n</mi><mo>=</mo><mn>50</mn><mo>…</mo><mn>400</mn></math>, <math><mo>|</mo><mi>λ</mi><mo>|</mo><mi>h</mi><mo>=</mo><mn>1.44</mn></math>, well inside the RK4 limit for <math><mi mathvariant="normal">Δ</mi><mi>t</mi><mo>=</mo><mi>h</mi><mo>/</mo><mn>2</mn></math>).</p>
+<p>Going back to <math><mi>Π</mi></math>, <math><mi>Φ</mi></math> is a diagonal change of variables, which does not change the eigenvalues:</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mover><mi>Π</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mfrac><msup><mrow><mo>(</mo><mi>a</mi><mi>Φ</mi><mo>)</mo></mrow><mo>′</mo></msup><mi>a</mi></mfrac><mo>+</mo><mi>b</mi><mi>Φ</mi></mtd></mtr>
+  <mtr><mtd><mover><mi>Φ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mfrac><msup><mrow><mo>(</mo><mi>a</mi><mi>Π</mi><mo>)</mo></mrow><mo>′</mo></msup><mi>a</mi></mfrac><mo>−</mo><mi>b</mi><mi>Π</mi></mtd></mtr>
+</mtable></math></div>
+<p>Expanding the first line gives <math><msup><mi>Φ</mi><mo>′</mo></msup><mo>+</mo><mn>2</mn><mi>b</mi><mi>Φ</mi></math> and the second gives <math><msup><mi>Π</mi><mo>′</mo></msup></math>, so this is the same equation. Only the discretization differs.</p>
+
+<h3>Implementation</h3>
+<p><math><mi>Θ</mi></math> and <math><mi>Ψ</mi></math> are never stored. <code>weightedStencil</code> (in <code>derivative.cpp</code>) evaluates <math><msub><mi>a</mi><mi>j</mi></msub><msub><mi>f</mi><mi>j</mi></msub></math> on the fly at the stencil points. This is the ordinary stencil with each neighbour weighted by <math><mi>a</mi><mo>(</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>+</mo><mi>k</mi></mrow></msub><mo>)</mo><mo>/</mo><mi>a</mi><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></math>. Ghost points use the parity of the product: <math><mi>a</mi></math> is odd at both ends, so <math><mi>a</mi><mi>Φ</mi></math> is even at 0 and odd at <math><mi>π</mi><mo>/</mo><mn>2</mn></math>, and <math><mi>a</mi><mi>Π</mi></math> is the opposite. So <math><mi>Θ</mi></math> is odd at 0 and even at <math><mi>π</mi><mo>/</mo><mn>2</mn></math>, <math><mi>Ψ</mi></math> the opposite, and both vanish at the two end nodes.</p>
+<p>Both equations must be used together, since the cancellation needs the pair.</p>
+
+<h3>Accuracy next to the origin</h3>
+<p>The division by <math><msub><mi>a</mi><mi>i</mi></msub><mo>≈</mo><mi>i</mi><mi>h</mi></math> multiplies the stencil error by <math><mn>1</mn><mo>/</mo><mo>(</mo><mi>i</mi><mi>h</mi><mo>)</mo></math>. With the 5-point stencil of <code>derP</code> the operator was only <math><mi>O</mi><mo>(</mo><msup><mi>h</mi><mn>3</mn></msup><mo>)</mo></math> at the first grid points (2.4e-7 at <math><mi>i</mi><mo>=</mo><mn>1</mn></math> for <math><mi>n</mi><mo>=</mo><mn>250</mn></math>, order 3.0). <code>weightedStencil</code> now uses a 7-point, 6th-order centred stencil with weights</p>
+<div class="eq"><math display="block"><mrow><mo>(</mo><mo>−</mo><mfrac><mn>1</mn><mn>60</mn></mfrac><mo>,</mo><mspace width="0.5em"/><mfrac><mn>3</mn><mn>20</mn></mfrac><mo>,</mo><mspace width="0.5em"/><mo>−</mo><mfrac><mn>3</mn><mn>4</mn></mfrac><mo>,</mo><mspace width="0.5em"/><mn>0</mn><mo>,</mo><mspace width="0.5em"/><mfrac><mn>3</mn><mn>4</mn></mfrac><mo>,</mo><mspace width="0.5em"/><mo>−</mo><mfrac><mn>3</mn><mn>20</mn></mfrac><mo>,</mo><mspace width="0.5em"/><mfrac><mn>1</mn><mn>60</mn></mfrac><mo>)</mo></mrow><mo>/</mo><mi>h</mi></math></div>
+<p>The operator error is <math><mi>O</mi><mo>(</mo><msup><mi>h</mi><mn>5</mn></msup><mo>)</mo></math> at the first points and <math><mi>O</mi><mo>(</mo><msup><mi>h</mi><mn>6</mn></msup><mo>)</mo></math> elsewhere (1e-10 at <math><mi>i</mi><mo>=</mo><mn>1</mn></math> for <math><mi>n</mi><mo>=</mo><mn>250</mn></math>, down to the roundoff floor of about 1e-13 on finer grids). The pair is at least 4th order at every grid point, and the full evolution is limited by RK4 in time. Energy conservation survives because it only needs an antisymmetric centred stencil and the reflection rules at the ends, for any width (largest real part 1e-13 to 8e-12, <math><mo>|</mo><mi>λ</mi><mo>|</mo><mi>h</mi></math> from 1.44 to 1.62). A wide stencil used only near the origin would break the symmetry, so the whole operator uses 7 points.</p>
+
+<h3>Cost</h3>
+<p>The weights call <code>tan</code> several times per point. On <code>./animation 2000 20 4 ads-expanded .01</code> it takes 84 s (74 s with the 5-point stencil, 25 s for the conservative <code>ads</code> form). Getting <math><mi>a</mi><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>+</mo><mi>k</mi><mi>h</mi><mo>)</mo></math> from <math><mi>a</mi><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></math> with the angle-addition formula halves the time of the 5-point version but changes the results by 3e-11 relative near <math><mi>π</mi><mo>/</mo><mn>2</mn></math> (cancellation in <math><mn>1</mn><mo>−</mo><mi>a</mi><mi>tan</mi><mo>&#x2061;</mo><mi>h</mi></math>). That breaks the exact skew-symmetry, so it was not adopted.</p>
+</section>
+
+<section id="rhs">
+<h2>4. Symmetrized right-hand side of <code>ads</code> and <code>einstein</code></h2>
+
+<h3>The problem with the conservative form</h3>
+<p><code>ads</code> and <code>einstein</code> used to evaluate <math><mover><mi>Π</mi><mo>˙</mo></mover><mo>=</mo><msup><mrow><mo>(</mo><mi>w</mi><mi>m</mi><mi>Φ</mi><mo>)</mo></mrow><mo>′</mo></msup><mo>/</mo><mi>w</mi></math> in conservative form. That operator has an unstable mode at the first grid points. The origin node <math><msub><mi>Π</mi><mn>0</mn></msub></math> has energy weight <math><mi>w</mi><mo>(</mo><mn>0</mn><mo>)</mo><mo>=</mo><mn>0</mn></math> but still drives <math><msub><mi>Φ</mi><mn>1</mn></msub></math> and <math><msub><mi>Φ</mi><mn>2</mn></msub></math> through the stencil, and its own equation (<math><mn>3</mn><msup><mi>Φ</mi><mo>′</mo></msup></math>) is not the conjugate of those couplings. The discrete operator therefore cannot be skew in the energy weight.</p>
+<table>
+  <caption>Largest <math><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math> of the conservative operator</caption>
+  <thead><tr><th scope="col" class="num"><math><mi>n</mi></math></th><th scope="col" class="num">50</th><th scope="col" class="num">100</th><th scope="col" class="num">200</th><th scope="col" class="num">400</th></tr></thead>
+  <tbody><tr><th scope="row"><math><mi>max</mi><mspace width="0.2em"/><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math></th><td class="num">0.12</td><td class="num">0.20</td><td class="num">0.21</td><td class="num">0.21</td></tr></tbody>
+</table>
+<p>It does not shrink with <math><mi>n</mi></math>; the number of unstable modes grows with <math><mi>n</mi></math>, and the eigenvector peaks at <math><mi>i</mi><mo>=</mo><mn>1</mn></math>. The <math><mi>i</mi><mo>=</mo><mn>1</mn></math> special case that had been added to improve accuracy doubled the rate (0.10 without it).</p>
+<div class="warn">
+<strong>It looks like physics.</strong> In long runs (<math><mi>n</mi><mo>=</mo><mn>500</mn></math>, <math><mi>σ</mi><mo>=</mo><mn>1</mn><mo>/</mo><mn>16</mn></math>) roundoff grew into a blow-up around <math><mi>t</mi><mo>=</mo><mn>150</mn><mo>–</mo><mn>300</mn></math>. In <code>einstein</code> mode this looks like a collapse (<math><mi>min</mi><mspace width="0.2em"/><mi>A</mi></math> falling to 0.80 at <math><mi>t</mi><mo>=</mo><mn>250</mn></math> from amplitude 0.01) before the run turns into NaN. It is invisible for <math><mi>t</mi></math> up to a few tens.
+</div>
+
+<h3>The cure with a weight m(x)</h3>
+<p>Let <math><mi>p</mi><mo>=</mo><msqrt><mi>m</mi></msqrt></math> and define <math><mi>Θ</mi><mo>=</mo><mi>p</mi><mi>a</mi><mi>Π</mi></math>, <math><mi>Ψ</mi><mo>=</mo><mi>p</mi><mi>a</mi><mi>Φ</mi></math>. Then</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mover><mi>Θ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mi mathvariant="script">S</mi><mi>Ψ</mi><mo>+</mo><mi>m</mi><mi>b</mi><mi>Ψ</mi></mtd></mtr>
+  <mtr><mtd><mover><mi>Ψ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mi mathvariant="script">S</mi><mi>Θ</mi><mo>−</mo><mi>m</mi><mi>b</mi><mi>Θ</mi></mtd></mtr>
+</mtable></math></div>
+<p>where <math><mi mathvariant="script">S</mi><mi>f</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>(</mo><mi>m</mi><msup><mi>f</mi><mo>′</mo></msup><mo>+</mo><msup><mrow><mo>(</mo><mi>m</mi><mi>f</mi><mo>)</mo></mrow><mo>′</mo></msup><mo>)</mo></math> (called <code>S</code> in the README). <math><mi mathvariant="script">S</mi></math> is skew-adjoint and the <math><mi>b</mi></math> terms cancel pointwise, so <math><mi>E</mi><mo>=</mo><mo>∫</mo><mo>(</mo><msup><mi>Θ</mi><mn>2</mn></msup><mo>+</mo><msup><mi>Ψ</mi><mn>2</mn></msup><mo>)</mo><mi>d</mi><mi>x</mi></math> is conserved for fixed <math><mi>m</mi></math>. In the original variables this is a diagonal change:</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mover><mi>Π</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mfrac><mrow><mi mathvariant="script">S</mi><mo>(</mo><mi>p</mi><mi>a</mi><mi>Φ</mi><mo>)</mo></mrow><mrow><mi>p</mi><mi>a</mi></mrow></mfrac><mo>+</mo><mi>m</mi><mi>b</mi><mi>Φ</mi><mo>=</mo><mfrac><mn>1</mn><mi>w</mi></mfrac><msup><mrow><mo>(</mo><mi>w</mi><mi>m</mi><mi>Φ</mi><mo>)</mo></mrow><mo>′</mo></msup></mtd></mtr>
+  <mtr><mtd><mover><mi>Φ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mfrac><mrow><mi mathvariant="script">S</mi><mo>(</mo><mi>p</mi><mi>a</mi><mi>Π</mi><mo>)</mo></mrow><mrow><mi>p</mi><mi>a</mi></mrow></mfrac><mo>−</mo><mi>m</mi><mi>b</mi><mi>Π</mi><mo>=</mo><msup><mrow><mo>(</mo><mi>m</mi><mi>Π</mi><mo>)</mo></mrow><mo>′</mo></msup></mtd></mtr>
+</mtable></math></div>
+<p><math><mi>Θ</mi></math> and <math><mi>Ψ</mi></math> are not stored: <math><mi>p</mi><mi>a</mi><mi>f</mi></math> is evaluated on the fly at the 7 stencil points, with ghost points following the parity of the product. The origin node is decoupled (<math><msub><mi>Θ</mi><mn>0</mn></msub><mo>=</mo><mn>0</mn></math>), which removes the unbalanced coupling.</p>
+
+<h3>Measured</h3>
+<ul>
+  <li>No unstable eigenvalue: largest <math><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math> is 1e-13 to 7e-12 for <math><mi>n</mi><mo>=</mo><mn>50</mn><mo>…</mo><mn>400</mn></math>, for <math><mi>m</mi><mo>=</mo><mn>1</mn></math>, a bump, a steep dip, and a profile with an odd <math><msup><mi>ρ</mi><mn>3</mn></msup></math> part at <math><mi>π</mi><mo>/</mo><mn>2</mn></math>. <math><mo>|</mo><mi>λ</mi><mo>|</mo><mi>h</mi><mo>=</mo><mn>1.62</mn></math>.</li>
+  <li><code>ads</code> runs to <math><mi>T</mi><mo>=</mo><mn>400</mn></math> with the inner value flat at 5e-6. <code>einstein</code> (amplitude 0.01) runs to <math><mi>T</mi><mo>=</mo><mn>400</mn></math> with <math><mi>min</mi><mspace width="0.2em"/><mi>A</mi><mo>=</mo><mn>1</mn></math>, where the old code blew up near <math><mi>t</mi><mo>=</mo><mn>200</mn></math> and <math><mi>t</mi><mo>=</mo><mn>300</mn></math>.</li>
+  <li>The right-hand side is more accurate. For <math><mover><mi>Π</mi><mo>˙</mo></mover></math> at <math><mi>x</mi><mo>&lt;</mo><mn>0.1</mn></math> the error is order 4 (9.4e-10, 7.7e-11, 5.3e-12, 3.5e-13 for <math><mi>n</mi><mo>=</mo><mn>100</mn><mo>…</mo><mn>800</mn></math>), where the old one was order 2 (7.9e-6 to 1.2e-7). Elsewhere it is 10 to 100 times smaller. <math><mover><mi>Φ</mi><mo>˙</mo></mover></math> is order 3 at <math><mi>x</mi><mo>&lt;</mo><mn>0.1</mn></math>, as before, set by the quadrature of <math><mi>A</mi></math> there.</li>
+  <li>The full coupled system converges at order 4.1 to 4.4 in L<sup>2</sup> (<code>test_convergence_einstein</code>, amplitude 0.5). Collapse thresholds are unchanged (amplitude 30 regular, 60 collapses at the same step), and <math><mi>min</mi><mspace width="0.2em"/><mi>A</mi></math> agrees with the old code to all printed digits.</li>
+</ul>
+<p><code>adsDivergence</code> and <code>adsDPi</code> (the conservative pair) are still in <code>derivative.cpp</code> and used by <code>test_convergence_linear.cpp</code>, which only compares resolutions up to <math><mi>T</mi><mo>=</mo><mi>π</mi></math>. Do not use them for long runs.</p>
+</section>
+
+<section id="symplectic">
+<h2>5. Differential operators and the symplectic structure</h2>
+<p>This section explains why the symmetrized pair works, in the language of Hamiltonian mechanics. The algebra in 5.1 to 5.3 is a derivation I checked by hand; 5.4 and 5.5 connect it to the measurements in the README. Nothing here was re-run in code.</p>
+
+<h3>5.1 Canonical structure</h3>
+<p>The radial action reduces to the Lagrangian density (up to the constant <math><msup><mi>L</mi><mn>2</mn></msup></math>)</p>
+<div class="eq"><math display="block"><mi mathvariant="script">L</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>w</mi><mo>(</mo><msup><mover><mi>φ</mi><mo>˙</mo></mover><mn>2</mn></msup><mo>−</mo><msup><mrow><msup><mi>φ</mi><mo>′</mo></msup></mrow><mn>2</mn></msup><mo>)</mo></math></div>
+<p>with <math><mi>w</mi><mo>=</mo><msup><mi>tan</mi><mn>2</mn></msup><mi>x</mi></math> coming from <math><msqrt><mrow><mo>−</mo><mi>g</mi></mrow></msqrt><msup><mi>g</mi><mrow><mi>t</mi><mi>t</mi></mrow></msup></math>. The canonical momentum is <math><mi>p</mi><mo>=</mo><mi>w</mi><mi>Π</mi></math>, so the field and its momentum carry different weights. The energy and the symplectic form are</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mi>E</mi><mo>[</mo><mi>φ</mi><mo>,</mo><mi>p</mi><mo>]</mo></mtd><mtd><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>∫</mo><mrow><mo>(</mo><mfrac><msup><mi>p</mi><mn>2</mn></msup><mi>w</mi></mfrac><mo>+</mo><mi>w</mi><msup><mrow><msup><mi>φ</mi><mo>′</mo></msup></mrow><mn>2</mn></msup><mo>)</mo></mrow><mi>d</mi><mi>x</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>∫</mo><mi>w</mi><mo>(</mo><msup><mi>Π</mi><mn>2</mn></msup><mo>+</mo><msup><mi>Φ</mi><mn>2</mn></msup><mo>)</mo><mi>d</mi><mi>x</mi></mtd></mtr>
+  <mtr><mtd><mi mathvariant="normal">Ω</mi></mtd><mtd><mo>=</mo><mo>∫</mo><mi>δ</mi><mi>p</mi><mo>∧</mo><mi>δ</mi><mi>φ</mi><mspace width="0.2em"/><mi>d</mi><mi>x</mi><mo>=</mo><mo>∫</mo><mi>w</mi><mspace width="0.2em"/><mi>δ</mi><mi>Π</mi><mo>∧</mo><mi>δ</mi><mi>φ</mi><mspace width="0.2em"/><mi>d</mi><mi>x</mi></mtd></mtr>
+</mtable></math></div>
+<p>Hamilton's equations <math><mover><mi>φ</mi><mo>˙</mo></mover><mo>=</mo><mi>δ</mi><mi>E</mi><mo>/</mo><mi>δ</mi><mi>p</mi></math>, <math><mover><mi>p</mi><mo>˙</mo></mover><mo>=</mo><mo>−</mo><mi>δ</mi><mi>E</mi><mo>/</mo><mi>δ</mi><mi>φ</mi></math> give <math><mover><mi>φ</mi><mo>˙</mo></mover><mo>=</mo><mi>Π</mi></math> and <math><mover><mi>p</mi><mo>˙</mo></mover><mo>=</mo><msup><mrow><mo>(</mo><mi>w</mi><msup><mi>φ</mi><mo>′</mo></msup><mo>)</mo></mrow><mo>′</mo></msup></math>. Dividing the second by <math><mi>w</mi></math> and differentiating the first in <math><mi>x</mi></math> recovers exactly the system of section 1. The weight <math><mi>w</mi></math> vanishes at the origin and blows up at <math><mi>π</mi><mo>/</mo><mn>2</mn></math>, which is the root of every numerical difficulty above.</p>
+
+<h3>5.2 The two operators are adjoint to each other</h3>
+<p>Use the weighted inner product <math><msub><mrow><mo>⟨</mo><mi>f</mi><mo>,</mo><mi>g</mi><mo>⟩</mo></mrow><mi>w</mi></msub><mo>=</mo><mo>∫</mo><mi>w</mi><mi>f</mi><mi>g</mi><mspace width="0.2em"/><mi>d</mi><mi>x</mi></math>. Integrating by parts (boundary terms vanish by the parities of section 1), the adjoint of <math><mo>∂</mo><mo>=</mo><mi>d</mi><mo>/</mo><mi>d</mi><mi>x</mi></math> is</p>
+<div class="eq"><math display="block"><msup><mo>∂</mo><mo>†</mo></msup><mo>=</mo><mo>−</mo><mfrac><mn>1</mn><mi>w</mi></mfrac><mo>∂</mo><mi>w</mi></math></div>
+<p>which is precisely the operator in the <math><mover><mi>Π</mi><mo>˙</mo></mover></math> equation. The system is therefore</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mover><mi>Φ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mo>∂</mo><mi>Π</mi></mtd></mtr>
+  <mtr><mtd><mover><mi>Π</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mo>−</mo><msup><mo>∂</mo><mo>†</mo></msup><mi>Φ</mi></mtd></mtr>
+</mtable></math></div>
+<p>and eliminating <math><mi>Φ</mi></math> gives <math><mover><mover><mi>φ</mi><mo>˙</mo></mover><mo>˙</mo></mover><mo>=</mo><mo>−</mo><msup><mo>∂</mo><mo>†</mo></msup><mo>∂</mo><mi>φ</mi></math>. The operator <math><msup><mo>∂</mo><mo>†</mo></msup><mo>∂</mo></math> is symmetric and non-negative, so <math><msup><mi>ω</mi><mn>2</mn></msup><mo>≥</mo><mn>0</mn></math> for every mode and the energy <math><mi>E</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>(</mo><msubsup><mrow><mo>‖</mo><mi>Π</mi><mo>‖</mo></mrow><mi>w</mi><mn>2</mn></msubsup><mo>+</mo><msubsup><mrow><mo>‖</mo><mi>Φ</mi><mo>‖</mo></mrow><mi>w</mi><mn>2</mn></msubsup><mo>)</mo></math> is conserved. The Poisson operator acting on <math><mi>u</mi><mo>=</mo><mo>(</mo><mi>Π</mi><mo>,</mo><mi>Φ</mi><mo>)</mo></math> is</p>
+<div class="eq"><math display="block"><mover><mi>u</mi><mo>˙</mo></mover><mo>=</mo><mi>J</mi><mspace width="0.3em"/><mfrac><mrow><mi>δ</mi><mi>E</mi></mrow><mrow><mi>δ</mi><mi>u</mi></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>J</mi><mo>=</mo><mfenced open="(" close=")"><mtable><mtr><mtd><mn>0</mn></mtd><mtd><msup><mi>w</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>∂</mo></mtd></mtr><mtr><mtd><mo>∂</mo><msup><mi>w</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></mtd><mtd><mn>0</mn></mtd></mtr></mtable></mfenced><mo>,</mo><mspace width="1.5em"/><mfrac><mrow><mi>δ</mi><mi>E</mi></mrow><mrow><mi>δ</mi><mi>u</mi></mrow></mfrac><mo>=</mo><mi>w</mi><mi>u</mi></math></div>
+<p><math><mi>J</mi></math> is skew-symmetric (<math><msup><mrow><mo>(</mo><msup><mi>w</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>∂</mo><mo>)</mo></mrow><mi>T</mi></msup><mo>=</mo><mo>−</mo><mo>∂</mo><msup><mi>w</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></math> in the plain <math><msup><mi>L</mi><mn>2</mn></msup></math> product) and has no dependence on the fields, so the Jacobi identity holds trivially. The flow therefore preserves both <math><mi>E</mi></math> and the symplectic form <math><mi mathvariant="normal">Ω</mi></math>.</p>
+<div class="why">
+<strong>The structural requirement.</strong> The discrete operator in the <math><mover><mi>Π</mi><mo>˙</mo></mover></math> equation must be minus the adjoint of the discrete operator in the <math><mover><mi>Φ</mi><mo>˙</mo></mover></math> equation, in the discrete energy inner product. This is a statement about the pair, not about either operator alone. It is what the expanded and conservative forms fail to satisfy, and what the next two subsections arrange by construction.
+</div>
+
+<h3>5.3 Symmetrized variables: the weight moves into the fields</h3>
+<p>With <math><mi>Θ</mi><mo>=</mo><mi>a</mi><mi>Π</mi></math> and <math><mi>Ψ</mi><mo>=</mo><mi>a</mi><mi>Φ</mi></math> (so that <math><msup><mi>a</mi><mn>2</mn></msup><mo>=</mo><mi>w</mi></math>), the weighted norm becomes the plain <math><msup><mi>L</mi><mn>2</mn></msup></math> norm, <math><mi>E</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>∫</mo><mo>(</mo><msup><mi>Θ</mi><mn>2</mn></msup><mo>+</mo><msup><mi>Ψ</mi><mn>2</mn></msup><mo>)</mo><mi>d</mi><mi>x</mi></math>, and the generator is</p>
+<div class="eq"><math display="block"><mover><mi>v</mi><mo>˙</mo></mover><mo>=</mo><mi>K</mi><mi>v</mi><mo>,</mo><mspace width="1.5em"/><mi>v</mi><mo>=</mo><mfenced open="(" close=")"><mtable><mtr><mtd><mi>Θ</mi></mtd></mtr><mtr><mtd><mi>Ψ</mi></mtd></mtr></mtable></mfenced><mo>,</mo><mspace width="1.5em"/><mi>K</mi><mo>=</mo><mfenced open="(" close=")"><mtable><mtr><mtd><mn>0</mn></mtd><mtd><mo>∂</mo><mo>+</mo><mi>b</mi></mtd></mtr><mtr><mtd><mo>∂</mo><mo>−</mo><mi>b</mi></mtd><mtd><mn>0</mn></mtd></mtr></mtable></mfenced></math></div>
+<p>Because <math><msup><mrow><mo>(</mo><mo>∂</mo><mo>+</mo><mi>b</mi><mo>)</mo></mrow><mo>†</mo></msup><mo>=</mo><mo>−</mo><mo>∂</mo><mo>+</mo><mi>b</mi><mo>=</mo><mo>−</mo><mo>(</mo><mo>∂</mo><mo>−</mo><mi>b</mi><mo>)</mo></math>, the operator <math><mi>K</mi></math> is skew-adjoint in the plain inner product, and <math><msup><mi>e</mi><mrow><mi>t</mi><mi>K</mi></mrow></msup></math> is unitary. Two features are worth naming:</p>
+<ul>
+  <li>The singular multiplier <math><mi>b</mi></math> appears only as an <em>antisymmetric</em> zeroth-order term. It rotates <math><mi>Θ</mi></math> into <math><mi>Ψ</mi></math> and never changes the norm, so its size near the ends does not matter for stability.</li>
+  <li>The <math><mi>Π</mi></math>, <math><mi>Φ</mi></math> form hides this: <math><msup><mi>w</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>∂</mo><mi>w</mi><mo>=</mo><mo>∂</mo><mo>+</mo><mn>2</mn><mi>b</mi></math> is a first-order operator whose zeroth-order part is a large <em>symmetric</em> term, the kind that can drive growth once the product rule fails.</li>
+</ul>
+<p>In the <math><mo>(</mo><mi>Θ</mi><mo>,</mo><mi>Ψ</mi><mo>)</mo></math> variables the pair is not a canonical <math><mo>(</mo><mi>q</mi><mo>,</mo><mi>p</mi><mo>)</mo></math> pair. It is a Hamiltonian system in the Poisson form <math><mover><mi>v</mi><mo>˙</mo></mover><mo>=</mo><mi>K</mi><mspace width="0.2em"/><mi>δ</mi><mi>E</mi><mo>/</mo><mi>δ</mi><mi>v</mi></math> with <math><mi>δ</mi><mi>E</mi><mo>/</mo><mi>δ</mi><mi>v</mi><mo>=</mo><mi>v</mi></math>. The canonical pair remains <math><mo>(</mo><mi>φ</mi><mo>,</mo><mi>w</mi><mi>Π</mi><mo>)</mo></math>.</p>
+
+<h3>5.4 The discrete operators</h3>
+<p>The discrete counterpart of "adjoint" is summation by parts. With the quadrature matrix <math><mi>H</mi><mo>=</mo><mi>diag</mi><mo>(</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>,</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mn>1</mn><mo>,</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>)</mo><mi>h</mi></math> (the trapezoid rule, which is where the half weights come from), the identity <math><mi>H</mi><msub><mi>D</mi><mi>Θ</mi></msub><mo>+</mo><msubsup><mi>D</mi><mi>Ψ</mi><mi>T</mi></msubsup><mi>H</mi><mo>=</mo><mn>0</mn></math> is the discrete form of <math><msup><mrow><mo>(</mo><mo>∂</mo><mo>+</mo><mi>b</mi><mo>)</mo></mrow><mo>†</mo></msup><mo>=</mo><mo>−</mo><mo>(</mo><mo>∂</mo><mo>−</mo><mi>b</mi><mo>)</mo></math>. Then the semi-discrete system</p>
+<div class="eq"><math display="block"><mover><mi>v</mi><mo>˙</mo></mover><mo>=</mo><msub><mi>K</mi><mi>h</mi></msub><mi>v</mi><mo>,</mo><mspace width="2em"/><msubsup><mi>K</mi><mi>h</mi><mi>T</mi></msubsup><mi>H</mi><mo>=</mo><mo>−</mo><mi>H</mi><msub><mi>K</mi><mi>h</mi></msub></math></div>
+<p>is a finite-dimensional linear Hamiltonian system with constant skew Poisson matrix <math><msub><mi>J</mi><mi>h</mi></msub><mo>=</mo><msub><mi>K</mi><mi>h</mi></msub><msup><mi>H</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></math> and energy <math><mfrac><mn>1</mn><mn>2</mn></mfrac><msup><mi>v</mi><mi>T</mi></msup><mi>H</mi><mi>v</mi></math>. Its flow <math><msup><mi>e</mi><mrow><mi>t</mi><msub><mi>K</mi><mi>h</mi></msub></mrow></msup></math> preserves that energy and the symplectic structure exactly, and in the eigenbasis it is a set of independent oscillators. This is the reason the eigenvalues are purely imaginary: the largest real parts of 1e-13 to 7e-12 in the README are roundoff, not growth. The same eigenvalue test therefore doubles as a check that the discrete operators really are mutually adjoint.</p>
+<table>
+  <caption>What each discretization preserves</caption>
+  <thead><tr><th scope="col">Form</th><th scope="col">Discrete adjoint relation</th><th scope="col">Outcome</th></tr></thead>
+  <tbody>
+    <tr><td>Expanded: <math><msup><mi>Φ</mi><mo>′</mo></msup><mo>+</mo><mn>2</mn><mi>b</mi><mi>Φ</mi></math></td>
+      <td>Fails. The product rule defect is of order 1 on grid-scale modes, and the term <math><mn>2</mn><mi>b</mi></math> is symmetric.</td>
+      <td>Growth rate about <math><mn>0.39</mn><mo>/</mo><mi>h</mi></math>.</td></tr>
+    <tr><td>Conservative: <math><mi>D</mi><mo>(</mo><mi>w</mi><mi>Φ</mi><mo>)</mo><mo>/</mo><mi>w</mi></math></td>
+      <td>Fails at the origin. The node with <math><mi>w</mi><mo>=</mo><mn>0</mn></math> has zero energy weight but is still coupled, so no weighted adjoint exists there.</td>
+      <td>Growth rate about 0.2, a mode at <math><mi>i</mi><mo>=</mo><mn>1</mn></math>, visible after <math><mi>t</mi><mo>≈</mo><mn>150</mn></math>.</td></tr>
+    <tr><td>Symmetrized <math><mo>(</mo><mi>Θ</mi><mo>,</mo><mi>Ψ</mi><mo>)</mo></math></td>
+      <td>Holds by construction (summation by parts with reflection rules, and an antisymmetric stencil of any width).</td>
+      <td>Purely imaginary spectrum; stable to <math><mi>T</mi><mo>=</mo><mn>400</mn></math>.</td></tr>
+  </tbody>
+</table>
+<p>The same idea is known in the summation-by-parts literature as the skew-symmetric (split) form: write a variable-coefficient derivative as <math><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>(</mo><mi>m</mi><mo>∂</mo><mo>+</mo><mo>∂</mo><mi>m</mi><mo>)</mo></math> rather than as either term alone. The operator <math><mi mathvariant="script">S</mi></math> of section 4 is exactly that.</p>
+
+<h3>5.5 The normal modes and the period</h3>
+<p>For the massless scalar in AdS<sub>4</sub> the normal-mode frequencies are the odd integers <math><msub><mi>ω</mi><mi>k</mi></msub><mo>=</mo><mn>3</mn><mo>+</mo><mn>2</mn><mi>k</mi></math>, <math><mi>k</mi><mo>=</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mo>…</mo></math> (a known result; I did not recompute the spectrum of the code). Since <math><msup><mi>e</mi><mrow><mi>i</mi><msub><mi>ω</mi><mi>k</mi></msub><mi>π</mi></mrow></msup><mo>=</mo><mo>−</mo><mn>1</mn></math> for every odd frequency, a pulse returns to its starting profile with the sign flipped after time <math><mi>π</mi></math>, and the field has period <math><mn>2</mn><mi>π</mi></math>. This matches the behaviour described in the README (<code>framesPerCycle</code> and the refocusing at <math><mi>t</mi><mo>=</mo><mi>π</mi></math>). Because the spectrum is exactly resonant, any frequency error of the discretization shows up as a phase drift, which is why the max-norm error grows with time even when the energy is conserved.</p>
+
+<h3>5.6 Time integration is not symplectic</h3>
+<p>Everything above concerns the <em>semi-discrete</em> system. RK4 is not a symplectic integrator. For one mode with <math><mi>z</mi><mo>=</mo><mi>i</mi><mi>y</mi></math>, <math><mi>y</mi><mo>=</mo><mi>ω</mi><mi mathvariant="normal">Δ</mi><mi>t</mi></math>, the amplification factor is <math><mi>R</mi><mo>(</mo><mi>z</mi><mo>)</mo><mo>=</mo><mn>1</mn><mo>+</mo><mi>z</mi><mo>+</mo><mfrac><msup><mi>z</mi><mn>2</mn></msup><mn>2</mn></mfrac><mo>+</mo><mfrac><msup><mi>z</mi><mn>3</mn></msup><mn>6</mn></mfrac><mo>+</mo><mfrac><msup><mi>z</mi><mn>4</mn></msup><mn>24</mn></mfrac></math>, and a direct expansion gives</p>
+<div class="eq"><math display="block"><msup><mrow><mo>|</mo><mi>R</mi><mo>(</mo><mi>i</mi><mi>y</mi><mo>)</mo><mo>|</mo></mrow><mn>2</mn></msup><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><msup><mi>y</mi><mn>6</mn></msup><mn>72</mn></mfrac><mo>+</mo><mfrac><msup><mi>y</mi><mn>8</mn></msup><mn>576</mn></mfrac></math></div>
+<p>So each step multiplies the energy of a mode by slightly less than one. The scheme is stable on the imaginary axis for <math><mo>|</mo><mi>y</mi><mo>|</mo><mo>≤</mo><mn>2</mn><msqrt><mn>2</mn></msqrt><mo>≈</mo><mn>2.83</mn></math>; the README reports <math><mo>|</mo><mi>λ</mi><mo>|</mo><mi>h</mi><mo>=</mo><mn>1.62</mn></math> at most, so with <math><mi mathvariant="normal">Δ</mi><mi>t</mi><mo>=</mo><mi>h</mi><mo>/</mo><mn>2</mn></math> the largest <math><mi>y</mi></math> is 0.81, well inside.</p>
+<ul>
+  <li><strong>Resolved modes:</strong> for <math><mi>y</mi><mo>=</mo><mn>0.025</mn></math> the loss is <math><msup><mi>y</mi><mn>6</mn></msup><mo>/</mo><mn>72</mn><mo>≈</mo><mn>3</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></math> per step. This is arithmetic from the formula above, not a measurement; the actual spectrum of the pulse was not computed.</li>
+  <li><strong>Grid-scale modes:</strong> for <math><mi>y</mi><mo>=</mo><mn>0.81</mn></math> the loss is about 0.4% of the energy per step, so RK4 acts as a weak selective filter on the worst-resolved modes.</li>
+</ul>
+<p>The exact conservation of <math><mi>E</mi></math> mentioned in sections 3 and 4 is therefore a property of the spatial operator. The fully discrete energy decays very slowly. A structure-preserving integrator (implicit midpoint or Gauss-Legendre, which conserve quadratic invariants exactly, or a staggered leapfrog) would remove that decay at the price of a linear solve per step in the first case, or a different grid layout in the second. I have not tried either; RK4 was kept because its time error is already below the fourth-order spatial error.</p>
+
+<h3>5.7 With backreaction</h3>
+<p>For the coupled system the metric functions <math><mi>A</mi></math> and <math><mi>δ</mi></math> are not dynamical; they are recomputed from the constraints at every RK4 stage. Eliminating them leaves a reduced phase space with the same canonical pair <math><mo>(</mo><mi>φ</mi><mo>,</mo><mi>p</mi><mo>)</mo></math>, <math><mi>p</mi><mo>=</mo><mi>w</mi><mi>Π</mi></math> (now <math><mi>Π</mi><mo>=</mo><msup><mi>A</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>e</mi><mi>δ</mi></msup><mover><mi>φ</mi><mo>˙</mo></mover></math>), and the Hamiltonian is the total mass, not the quadratic form above. Two consequences for the code:</p>
+<ul>
+  <li>At each instant the operator is the weighted version of section 4, which is skew for the <em>frozen</em> <math><mi>m</mi></math>. This removes the spurious instability of the operator, and that is what the README measured (largest <math><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math> of 1e-13 to 7e-12 for several profiles of <math><mi>m</mi></math>).</li>
+  <li><math><mo>∫</mo><mo>(</mo><msup><mi>Θ</mi><mn>2</mn></msup><mo>+</mo><msup><mi>Ψ</mi><mn>2</mn></msup><mo>)</mo><mi>d</mi><mi>x</mi></math> is <em>not</em> conserved, because <math><mi>m</mi></math> changes in time. The true invariant is the mass. The README does not test mass conservation of the scheme, only constraint residuals, convergence order and <math><mi>min</mi><mspace width="0.2em"/><mi>A</mi></math>. The statement that the reduced dynamics is Hamiltonian with the mass as energy comes from the general theory of the spherically symmetric Einstein-scalar system, in the gauge <math><mi>δ</mi><mo>(</mo><mn>0</mn><mo>)</mo><mo>=</mo><mn>0</mn></math> the time is central proper time, so the generator differs from the boundary-time mass by a factor. I have not checked this in the code.</li>
+</ul>
+</section>
+
+<section id="einstein">
+<h2>6. Einstein-scalar system with backreaction</h2>
+<p>The metric is <math><mi>d</mi><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mfrac><msup><mi>L</mi><mn>2</mn></msup><mrow><msup><mi>cos</mi><mn>2</mn></msup><mo>&#x2061;</mo><mi>x</mi></mrow></mfrac><mo>(</mo><mo>−</mo><mi>A</mi><msup><mi>e</mi><mrow><mo>−</mo><mn>2</mn><mi>δ</mi></mrow></msup><mi>d</mi><msup><mi>t</mi><mn>2</mn></msup><mo>+</mo><mfrac><mrow><mi>d</mi><msup><mi>x</mi><mn>2</mn></msup></mrow><mi>A</mi></mfrac><mo>+</mo><msup><mi>sin</mi><mn>2</mn></msup><mo>&#x2061;</mo><mi>x</mi><mspace width="0.2em"/><mi>d</mi><msup><mi mathvariant="normal">Ω</mi><mn>2</mn></msup><mo>)</mo></math>, with <math><mi>Φ</mi><mo>=</mo><msup><mi>φ</mi><mo>′</mo></msup></math> and <math><mi>Π</mi><mo>=</mo><msup><mi>A</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>e</mi><mi>δ</mi></msup><mover><mi>φ</mi><mo>˙</mo></mover></math>. Let <math><mi>s</mi><mo>≡</mo><msup><mi>Φ</mi><mn>2</mn></msup><mo>+</mo><msup><mi>Π</mi><mn>2</mn></msup></math> (called <code>S</code> in the README).</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mover><mi>Φ</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><msup><mrow><mo>(</mo><mi>m</mi><mi>Π</mi><mo>)</mo></mrow><mo>′</mo></msup></mtd></mtr>
+  <mtr><mtd><mover><mi>Π</mi><mo>˙</mo></mover></mtd><mtd><mo>=</mo><mfrac><mn>1</mn><mi>w</mi></mfrac><msup><mrow><mo>(</mo><mi>w</mi><mi>m</mi><mi>Φ</mi><mo>)</mo></mrow><mo>′</mo></msup></mtd></mtr>
+  <mtr><mtd><msup><mi>δ</mi><mo>′</mo></msup></mtd><mtd><mo>=</mo><mo>−</mo><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi><mi>cos</mi><mo>&#x2061;</mo><mi>x</mi><mspace width="0.2em"/><mi>s</mi><mo>,</mo><mspace width="2em"/><mi>δ</mi><mo>(</mo><mn>0</mn><mo>)</mo><mo>=</mo><mn>0</mn></mtd></mtr>
+  <mtr><mtd><msup><mi>A</mi><mo>′</mo></msup></mtd><mtd><mo>=</mo><mfrac><mrow><mn>1</mn><mo>+</mo><mn>2</mn><msup><mi>sin</mi><mn>2</mn></msup><mo>&#x2061;</mo><mi>x</mi></mrow><mrow><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi><mi>cos</mi><mo>&#x2061;</mo><mi>x</mi></mrow></mfrac><mo>(</mo><mn>1</mn><mo>−</mo><mi>A</mi><mo>)</mo><mo>−</mo><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi><mi>cos</mi><mo>&#x2061;</mo><mi>x</mi><mspace width="0.2em"/><mi>A</mi><mspace width="0.2em"/><mi>s</mi><mo>,</mo><mspace width="2em"/><mi>A</mi><mo>(</mo><mn>0</mn><mo>)</mo><mo>=</mo><mn>1</mn></mtd></mtr>
+</mtable></math></div>
+
+<h3>Closed form for A and δ</h3>
+<p><math><mi>A</mi></math> and <math><mi>δ</mi></math> are not stepped in time. At every RK4 stage they are recomputed from the current <math><mi>Π</mi></math> and <math><mi>Φ</mi></math> (<code>solveGeometry</code>):</p>
+<div class="eq"><math display="block">
+<mtable columnalign="right left" columnspacing="0.4em">
+  <mtr><mtd><mi>δ</mi><mo>(</mo><mi>x</mi><mo>)</mo></mtd><mtd><mo>=</mo><mo>−</mo><msubsup><mo>∫</mo><mn>0</mn><mi>x</mi></msubsup><mi>sin</mi><mo>&#x2061;</mo><mi>y</mi><mi>cos</mi><mo>&#x2061;</mo><mi>y</mi><mspace width="0.2em"/><mi>s</mi><mo>(</mo><mi>y</mi><mo>)</mo><mspace width="0.2em"/><mi>d</mi><mi>y</mi></mtd></mtr>
+  <mtr><mtd><mn>1</mn><mo>−</mo><mi>A</mi><mo>(</mo><mi>x</mi><mo>)</mo></mtd><mtd><mo>=</mo><msup><mi>e</mi><mrow><mi>δ</mi><mo>(</mo><mi>x</mi><mo>)</mo></mrow></msup><mfrac><mrow><msup><mi>cos</mi><mn>3</mn></msup><mo>&#x2061;</mo><mi>x</mi></mrow><mrow><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi></mrow></mfrac><msubsup><mo>∫</mo><mn>0</mn><mi>x</mi></msubsup><msup><mi>e</mi><mrow><mo>−</mo><mi>δ</mi><mo>(</mo><mi>y</mi><mo>)</mo></mrow></msup><msup><mi>tan</mi><mn>2</mn></msup><mo>&#x2061;</mo><mi>y</mi><mspace width="0.2em"/><mi>s</mi><mo>(</mo><mi>y</mi><mo>)</mo><mspace width="0.2em"/><mi>d</mi><mi>y</mi></mtd></mtr>
+</mtable></math></div>
+<p>The quadrature is 4th-order cumulative. The integrand is smooth, including at <math><mi>π</mi><mo>/</mo><mn>2</mn></math>, and computing <math><mn>1</mn><mo>−</mo><mi>A</mi></math> directly avoids cancellation and the <math><mn>1</mn><mo>/</mo><mo>(</mo><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi><mi>cos</mi><mo>&#x2061;</mo><mi>x</mi><mo>)</mo></math> singularities. The time step uses <code>evolveRK4(sf, &amp;einsteinRHS)</code>. <code>adsRHS</code> is the same code with <math><mi>A</mi><mo>=</mo><mn>1</mn></math> and <math><mi>δ</mi><mo>=</mo><mn>0</mn></math> frozen, so one right-hand side serves both cases.</p>
+
+<h3>Checks</h3>
+<ul>
+  <li>Inserting the computed <math><mi>A</mi></math> and <math><mi>δ</mi></math> into the differential equations: the <math><msup><mi>δ</mi><mo>′</mo></msup></math> residual is order 4, and the <math><msup><mi>A</mi><mo>′</mo></msup></math> residual is order 3 next to the origin (localized; it does not show in the evolution, which stays at order 4).</li>
+  <li>The sign is <math><msup><mi>e</mi><mrow><mo>−</mo><mi>δ</mi></mrow></msup></math>, not <math><msup><mi>e</mi><mrow><mo>+</mo><mi>δ</mi></mrow></msup></math>, for the given <math><msup><mi>δ</mi><mo>′</mo></msup></math> and <math><msup><mi>A</mi><mo>′</mo></msup></math>. The wrong sign would have broken the constraints silently.</li>
+</ul>
+
+<h3>Collapse</h3>
+<p>The characteristic speed is <math><mi>m</mi><mo>=</mo><mi>A</mi><msup><mi>e</mi><mrow><mo>−</mo><mi>δ</mi></mrow></msup></math>. After every step the minimum of <math><mi>A</mi></math> is checked. If <math><mi>min</mi><mspace width="0.2em"/><mi>A</mi><mo>&lt;</mo><mn>1</mn><mo>/</mo><mi>n</mi></math> or <math><mi>A</mi></math> is not finite, the run stops with exit code 3. For strong fields <math><mi mathvariant="normal">Δ</mi><mi>t</mi><mo>=</mo><mi>h</mi><mo>/</mo><mn>2</mn></math> is too large and the run goes to NaN a few steps before <math><mi>A</mi></math> actually reaches 0, so the reported collapse time is approximate.</p>
+</section>
+
+<section id="results">
+<h2>7. Results</h2>
+
+<h3>Convergence order</h3>
+<table>
+  <caption>Measured orders</caption>
+  <thead><tr><th scope="col">Quantity</th><th scope="col">Result</th></tr></thead>
+  <tbody>
+    <tr><td>Linear <code>ads</code>, L<sup>2</sup> self-convergence (7-point weighted stencil)</td><td>4.1 to 4.6 for <math><mi>σ</mi><mo>=</mo><mn>1</mn></math>; 4.4 to 4.5 for <math><mi>σ</mi><mo>=</mo><mn>1</mn><mo>/</mo><mn>16</mn></math></td></tr>
+    <tr><td>Linear <code>ads</code>, max-norm, <math><mi>σ</mi><mo>=</mo><mn>1</mn><mo>/</mo><mn>16</mn></math></td><td>steady 3.8 to 4.0 (with the 5-point stencil: 2.4 to 4.8 depending on time)</td></tr>
+    <tr><td>Coupled Einstein-scalar system, L<sup>2</sup> (amplitude 0.5)</td><td>4.1 to 4.4; self-convergence of <math><mi>Π</mi></math> about 4.0</td></tr>
+    <tr><td><math><msup><mi>δ</mi><mo>′</mo></msup></math> constraint residual</td><td>order 4</td></tr>
+    <tr><td><math><msup><mi>A</mi><mo>′</mo></msup></math> constraint residual</td><td>order 3 (localized next to the origin)</td></tr>
+    <tr><td>Flat-wave convergence ratio at a clean time (<code>w</code>)</td><td>4.00</td></tr>
+  </tbody>
+</table>
+
+<figure>
+  <img src="img/convergence.png" alt="Left: L2 error versus time on a logarithmic axis for the resolution pairs. Right: measured convergence order versus time.">
+  <figcaption>Error versus time (log y) and measured order, produced by <code>convergence/plot.gp</code> from <code>test_convergence_linear</code>.</figcaption>
+</figure>
+
+<h3>Refocusing at the origin</h3>
+<table>
+  <caption>Error at the first refocus (<math><mi>t</mi><mo>=</mo><mi>π</mi></math>, exact <math><mi>Π</mi><mo>(</mo><mn>0</mn><mo>)</mo><mo>=</mo><mo>−</mo><mn>1</mn></math>, <math><mi>σ</mi><mo>=</mo><mn>1</mn><mo>/</mo><mn>16</mn></math>, <math><mi>n</mi><mo>=</mo><mn>250</mn></math>)</caption>
+  <thead><tr><th scope="col">Scheme</th><th scope="col" class="num">Error</th></tr></thead>
+  <tbody>
+    <tr><td>7-point symmetrized form</td><td class="num">2.9e-4</td></tr>
+    <tr><td>5-point symmetrized form</td><td class="num">4.5e-3</td></tr>
+    <tr><td>Conservative form</td><td class="num">3.9e-3</td></tr>
+  </tbody>
+</table>
+
+<h3>Stability</h3>
+<table>
+  <caption>Spatial operator and long runs</caption>
+  <thead><tr><th scope="col">Form</th><th scope="col">Max <math><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math></th><th scope="col">Long-run behaviour</th></tr></thead>
+  <tbody>
+    <tr><td>Expanded, centred stencil</td><td>growth about <math><mn>0.39</mn><mo>/</mo><mi>h</mi></math> near <math><mi>π</mi><mo>/</mo><mn>2</mn></math>, <math><mn>0.1</mn><mo>/</mo><mi>h</mi></math> near 0</td><td>blows up for every time step</td></tr>
+    <tr><td>Conservative</td><td>0.12, 0.20, 0.21, 0.21 for <math><mi>n</mi><mo>=</mo><mn>50</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>200</mn><mo>,</mo><mn>400</mn></math></td><td>looks stable for <math><mi>T</mi></math> of a few tens; blows up near <math><mi>t</mi><mo>=</mo><mn>150</mn><mo>–</mo><mn>300</mn></math></td></tr>
+    <tr><td>Symmetrized (<math><mi>Θ</mi></math>, <math><mi>Ψ</mi></math>, weight <math><mi>m</mi></math>)</td><td>1e-13 to 7e-12 (roundoff; purely imaginary in exact arithmetic)</td><td>stable to <math><mi>T</mi><mo>=</mo><mn>400</mn></math> (<math><mi>n</mi><mo>=</mo><mn>500</mn></math>, <math><mi>σ</mi><mo>=</mo><mn>1</mn><mo>/</mo><mn>16</mn></math>)</td></tr>
+  </tbody>
+</table>
+
+<h3>Collapse thresholds (<code>einstein</code>, <math><mi>σ</mi><mo>=</mo><mn>1</mn><mo>/</mo><mn>16</mn></math>, <math><mi>n</mi><mo>=</mo><mn>500</mn></math>, <math><mi>T</mi><mo>=</mo><mn>2</mn><mi>π</mi></math>)</h3>
+<ul>
+  <li>Amplitude 30: regular, <math><mi>min</mi><mspace width="0.2em"/><mi>A</mi><mo>=</mo><mn>0.55</mn></math>, <math><mi>δ</mi></math> down to −1.3.</li>
+  <li>Amplitude 60: collapses at <math><mi>t</mi><mo>=</mo><mn>0.009</mn></math>.</li>
+  <li>Data with <math><mi>min</mi><mspace width="0.2em"/><mi>A</mi><mo>&lt;</mo><mn>1</mn><mo>/</mo><mi>n</mi></math> is rejected at <math><mi>t</mi><mo>=</mo><mn>0</mn></math> from an amplitude of about 735 (the limit scales with <math><mi>n</mi></math>).</li>
+</ul>
+
+<h3>Output size and timing</h3>
+<ul>
+  <li>Capping points per frame and using 6 digits: 956 frames, 8.1 MB, instead of a 303 MB <code>frames.dat</code> for 5001 points by 1002 frames.</li>
+  <li>GIF rendering: 8 s for 5 MB, 20 s for 10 MB, 59 s for 21 MB. About 1 minute for 640 frames and 7 minutes for 2000. The estimate of 4 to 5 minutes for 50 MB is a fit, not a measurement.</li>
+  <li><code>ads-expanded</code> and <code>ads</code> agree to 1e-14 (same discretization, different arithmetic).</li>
+</ul>
+</section>
+
+<section id="lessons">
+<h2>8. Lessons learnt</h2>
+
+<h3>Testing convergence</h3>
+<ul>
+  <li><strong>Compare resolutions at the same final time.</strong> The first <code>test_convergence_point.cpp</code> took one step per grid, so each resolution stopped at a different time and the ratio was exactly 2.0000. It measured how the solution changes with <math><mi>t</mi></math>, not the scheme order. Evolving every resolution to the same <math><mi>T</mi></math> gave 4.00.</li>
+  <li><strong>Check the right-hand side before judging the scheme.</strong> An earlier version had <math><mover><mi>Π</mi><mo>˙</mo></mover><mo>=</mo><mi>Π</mi></math> instead of <math><mover><mi>Π</mi><mo>˙</mo></mover><mo>=</mo><msup><mi>Φ</mi><mo>′</mo></msup></math>, so the spatial derivative never entered the test.</li>
+  <li><strong>Know where the error floor is.</strong> At <math><mi>T</mi><mo>=</mo><mi>π</mi></math> the errors are about 1e-8 to 1e-14, near double precision, and an apparent order of 5 to 7 means nothing. A single point value can also change sign between resolutions. Prefer an L<sup>2</sup> norm and a time where errors are well above roundoff.</li>
+  <li><strong>Use an exact solution when there is one.</strong> For the flat wave equation the method of images gives one (<code>test_boundary_flat.cpp</code>).</li>
+  <li><strong>The initial data limits the order.</strong> A nonzero <math><msup><mi>Π</mi><mo>′</mo></msup><mo>(</mo><mn>0</mn><mo>)</mo></math> gave about 1.2, and a wide pulse with a tail at the ends gave 0.8.</li>
+</ul>
+
+<h3>Equations and boundaries</h3>
+<ul>
+  <li><strong>The metric decides the equation.</strong> The first derivation assumed flat space and was wrong for this problem.</li>
+  <li><strong>Conservative form is not enough; make the operator skew.</strong> Applying the stencil to <math><mi>w</mi><mi>Φ</mi></math> and dividing afterwards looks stable for runs of a few tens of time units. But its discrete operator is not skew in the energy weight, which leaves a growing mode at <math><mi>i</mi><mo>=</mo><mn>1</mn></math> that shows up only after <math><mi>t</mi></math> of 100 to 300. The symmetrized pair is what is needed (section 5 explains why). Check it with the eigenvalues of the operator.</li>
+  <li><strong>Take the boundary parities from the asymptotics.</strong> With <math><mi>φ</mi><mo>=</mo><mi>f</mi><msup><mi>ρ</mi><mn>3</mn></msup><mo>+</mo><mi>O</mi><mo>(</mo><msup><mi>ρ</mi><mn>5</mn></msup><mo>)</mo></math>, <math><mi>Π</mi></math> is odd and <math><mi>Φ</mi></math> is even at <math><mi>x</mi><mo>=</mo><mi>π</mi><mo>/</mo><mn>2</mn></math>. The wrong parity gave first-order error near the outer boundary. <code>derP</code> takes a separate parity for each end.</li>
+  <li><strong>Fill singular limits explicitly</strong> (<math><mover><mi>Π</mi><mo>˙</mo></mover><mo>=</mo><mn>3</mn><msup><mi>Φ</mi><mo>′</mo></msup></math> at the origin; extrapolation of <math><mi>w</mi><mi>Φ</mi></math> at <math><mi>π</mi><mo>/</mo><mn>2</mn></math>).</li>
+  <li><strong>Apply parity only to ghost points.</strong> The old stencil flipped the sign of real points too (<code>&lt;=</code> instead of <code>&lt;</code>). It was harmless only because those values were exactly zero.</li>
+</ul>
+
+<h3>Backreaction</h3>
+<ul>
+  <li><strong>Derive the sign from the metric</strong> (<math><msup><mi>e</mi><mrow><mo>−</mo><mi>δ</mi></mrow></msup></math>).</li>
+  <li><strong>Solve the constraints in closed form</strong> with an integrating factor and an integration by parts.</li>
+  <li><strong>Test an implementation against its own equations</strong> by inserting the computed <math><mi>A</mi></math> and <math><mi>δ</mi></math> into the differential equations.</li>
+  <li><strong>Share one right-hand side.</strong> The linear case is <math><mi>A</mi><mo>=</mo><mn>1</mn><mo>,</mo><mi>δ</mi><mo>=</mo><mn>0</mn></math>, and the old behaviour was reproduced to about 1e-14.</li>
+  <li><strong>A short run is not a stability test.</strong> An instability with <math><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi><mo>=</mo><mn>0.2</mn></math> multiplies roundoff by about 1e16 only after <math><mi>t</mi></math> of roughly 180. Three earlier "stable" verdicts were based on <math><mi>T</mi><mo>≤</mo><mn>20</mn></math>. Compute the eigenvalues and run at least one long evolution (here <math><mi>T</mi><mo>=</mo><mn>400</mn></math>).</li>
+</ul>
+
+<h3>Robustness near collapse</h3>
+<ul>
+  <li><strong>The step limit changes with the fields.</strong> Treat the reported collapse time as approximate.</li>
+  <li><strong>Stop on <math><mi>min</mi><mspace width="0.2em"/><mi>A</mi><mo>&lt;</mo><mn>1</mn><mo>/</mo><mi>n</mi></math> and on non-finite <math><mi>A</mi></math>.</strong> Check the initial data too.</li>
+  <li><strong>Never write non-finite frames.</strong> On a collapse the output ends at the last finite state.</li>
+  <li><strong>Validate arguments.</strong> <code>stepsPerFrame = 0</code> crashed with a floating-point exception, and a tiny <math><mi>n</mi></math> read out of bounds.</li>
+  <li><strong>Stability follows from structure, not from where you patch.</strong> Special treatment of the quotient near the ends (l'Hôpital, hybrids) only moved or reduced the growth. The cause was the broken product rule for the stencil, found by computing the eigenvalues of the linear operator as a matrix and measuring the defect. The fix was to change variables so the singular terms cancel pointwise.</li>
+  <li><strong>Eigenvalues of the semi-discrete operator are the fastest diagnostic.</strong> Build the matrix from unit vectors and check <math><mi>max</mi><mspace width="0.2em"/><mi>Re</mi><mspace width="0.2em"/><mi>λ</mi></math>. An instability that scales like <math><mn>1</mn><mo>/</mo><mi>h</mi></math> is the spatial discretization, not the time step, and where the eigenvector peaks says which end is responsible.</li>
+</ul>
+
+<h3>Output and plotting</h3>
+<ul>
+  <li><strong>Do not store more than can be seen.</strong> Cap the points per frame (256) and use 6 digits.</li>
+  <li><strong>Make plot scripts robust.</strong> One frame with values around 1e300 made gnuplot's axis ranges infinite. <code>plot.gp</code> now ignores NaN/Inf and anything above <code>cap</code>.</li>
+  <li><strong>Do not hard-code what the program can write.</strong> Frame times are written to <code>times.dat</code>.</li>
+  <li><strong>Rendering time grows faster than the data</strong>, because each frame is looked up with <code>index k</code>.</li>
+  <li><strong>GIF looping.</strong> <code>animate</code> loops forever by default, <code>loop 0</code> also loops forever, <code>loop 1</code> plays twice, and <code>loop -1</code> plays once. Verified by reading the file's bytes.</li>
+</ul>
+
+<h3>Workflow</h3>
+<ul>
+  <li><strong>Read the file before describing it.</strong> Say what was and was not checked.</li>
+  <li><strong>Rebuild after every source change.</strong> A stale <code>animation</code> produced a bad last frame; a build line without <code>einstein.cpp</code> fails to link.</li>
+  <li><strong>Generated files can explode.</strong> A 3.8 GB NaN <code>frames.dat</code> appeared once. Binaries and output directories should not share a name.</li>
+  <li><strong>Measure, then extrapolate.</strong> Where a number is a fit rather than a measurement, say so.</li>
+</ul>
+</section>
+
+<section id="usage">
+<h2>9. Programs and arguments</h2>
+<table>
+  <caption>Source files</caption>
+  <thead><tr><th scope="col">File</th><th scope="col">Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>derivative.cpp/.hpp</code></td><td>Stencil <code>derP</code> / <code>der</code>, AdS operators <code>adsDPi</code>, <code>adsDivergence</code></td></tr>
+    <tr><td><code>evolution.cpp/.hpp</code></td><td>One RK4 step, <code>evolve</code></td></tr>
+    <tr><td><code>structure.cpp/.hpp</code></td><td><code>ScalarField</code> struct and initial profile <code>gaussTan</code></td></tr>
+    <tr><td><code>test_convergence_point.cpp</code></td><td>Convergence ratio at one point, common final time</td></tr>
+    <tr><td><code>test_convergence_linear.cpp</code></td><td>L<sup>2</sup> self-convergence versus time (writes <code>convergence/</code>)</td></tr>
+    <tr><td><code>einstein.cpp/.hpp</code></td><td><code>solveGeometry</code> (A, δ) and <code>einsteinRHS</code></td></tr>
+    <tr><td><code>test_convergence_einstein.cpp</code></td><td>Constraint residuals and self-convergence of the coupled system</td></tr>
+    <tr><td><code>test_boundary_flat.cpp</code></td><td>Comparison with the exact solution of the <em>flat</em> 1D wave equation</td></tr>
+    <tr><td><code>animation.cpp</code></td><td>Dumps Π and Φ frames (writes <code>animation/frames.dat</code>)</td></tr>
+    <tr><td><code>progress.hpp</code></td><td>Terminal progress bar</td></tr>
+  </tbody>
+</table>
+
+<h3>Build lines</h3>
+<pre><code>g++ -O2 -o w test_convergence_point.cpp einstein.cpp derivative.cpp evolution.cpp structure.cpp
+g++ -O2 -o test_convergence_linear test_convergence_linear.cpp derivative.cpp evolution.cpp structure.cpp
+g++ -O2 -o animation animation.cpp einstein.cpp derivative.cpp evolution.cpp structure.cpp
+g++ -O2 -o test_convergence_einstein test_convergence_einstein.cpp einstein.cpp derivative.cpp evolution.cpp structure.cpp
+g++ -O2 -o test_boundary_flat test_boundary_flat.cpp derivative.cpp evolution.cpp structure.cpp</code></pre>
+
+<details>
+<summary>Command-line arguments</summary>
+<p>All arguments are optional and positional: to set a later one you must give every one before it.</p>
+<table>
+  <caption><code>./animation [n] [T] [stepsPerFrame] [mode] [amplitude] [maxPoints] [maxFrames] [framesPerCycle]</code></caption>
+  <thead><tr><th scope="col">#</th><th scope="col">Argument</th><th scope="col">Default</th><th scope="col">Notes</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><code>n</code></td><td>500</td><td>Grid intervals; <math><mi>h</mi><mo>=</mo><mfrac><mrow><mi>π</mi><mo>/</mo><mn>2</mn></mrow><mi>n</mi></mfrac></math>, <math><mi mathvariant="normal">Δ</mi><mi>t</mi><mo>=</mo><mi>h</mi><mo>/</mo><mn>2</mn></math>. Integer ≥ 4.</td></tr>
+    <tr><td>2</td><td><code>T</code></td><td>2π</td><td>Final time, &gt; 0.</td></tr>
+    <tr><td>3</td><td><code>stepsPerFrame</code></td><td>20</td><td>Integer ≥ 1. The larger of this and the <code>framesPerCycle</code> rule is used.</td></tr>
+    <tr><td>4</td><td><code>mode</code></td><td>ads</td><td><code>ads</code>, <code>ads-expanded</code> or <code>einstein</code>.</td></tr>
+    <tr><td>5</td><td><code>amplitude</code></td><td>1</td><td>Peak of <math><mi>Π</mi></math> is amplitude/π.</td></tr>
+    <tr><td>6</td><td><code>maxPoints</code></td><td>256</td><td>Hard limit 256.</td></tr>
+    <tr><td>7</td><td><code>maxFrames</code></td><td>0 (none)</td><td>Raises <code>stepsPerFrame</code> if needed.</td></tr>
+    <tr><td>8</td><td><code>framesPerCycle</code></td><td>100</td><td>Frames per time interval π; 0 disables the rule.</td></tr>
+  </tbody>
+</table>
+<p>Other programs: <code>./w [mode] [amplitude]</code>, <code>./test_convergence_einstein [amplitude] [sigma]</code> (defaults 0.5 and 1.0), <code>./test_boundary_flat [width] [r0]</code> (defaults 0.1 and π/4), and <code>./test_convergence_linear</code> (no arguments).</p>
+<table>
+  <caption>Exit codes (<code>w</code> and <code>animation</code>)</caption>
+  <thead><tr><th scope="col">Code</th><th scope="col">Meaning</th></tr></thead>
+  <tbody>
+    <tr><td>0</td><td>The run finished.</td></tr>
+    <tr><td>1</td><td>Bad arguments. Nothing is written.</td></tr>
+    <tr><td>3</td><td>Stopped early: collapse in <code>einstein</code> mode, or a blow-up guard in <code>ads-expanded</code> mode.</td></tr>
+  </tbody>
+</table>
+</details>
+</section>
+
+</main>
+
+<footer>
+  <p>Generated from <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4/blob/main/docs/NOTES.md"><code>NOTES.md</code></a>. Equations are written in MathML, which current Chrome, Edge, Firefox and Safari render natively. Section 2 and section 5 are added explanations; the numbers elsewhere are copied from the README and were not re-measured for this page. The <math><mi mathvariant="normal">Δ</mi><mi>t</mi></math> loss estimates in 5.6 are arithmetic from the RK4 amplification factor.</p>
+</footer>
+</body>
+</html>
