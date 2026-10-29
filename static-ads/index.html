@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radial stability of stars in anti-de Sitter space</title>
+<meta name="description" content="Building static perfect-fluid stars in anti-de Sitter space, and finding which of them survive a small radial push.">
+<link rel="stylesheet" href="../theme.css">
+<script src="../theme.js"></script>
+<script>
+  document.documentElement.classList.add('js');  // lets the CSS hide .reveal items only when scripting works
+  window.MathJax = { tex: { tags: 'ams' } };  // auto-number \begin{equation}
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<link rel="stylesheet" href="../post.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="home" href="../index.html">&larr; <span>Convergence Point</span></a>
+  <nav aria-label="Sections">
+    <a href="#intro">Context</a>
+    <a href="#model">Model</a>
+    <a href="#solving">Solving</a>
+    <a href="#stars">Stars</a>
+    <a href="#stability">Stability</a>
+    <a href="#modes">Modes</a>
+    <a href="#results">Checks</a>
+  </nav>
+  <span data-theme-switch></span>
+</header>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <div class="wrap">
+    <div class="kicker">Compact objects &middot; Anti-de Sitter space</div>
+    <h1>Radial stability of stars in anti-de Sitter space</h1>
+    <p class="lede">
+      Building static perfect-fluid stars with a negative cosmological
+      constant, and finding out which of them survive a small radial push.
+    </p>
+    <div class="btns">
+      <a class="btn" href="#modes">See the modes</a>
+      <a class="btn ghost" href="derivation.html">Technical notes</a>
+    </div>
+    <p class="hero-meta">Posted October 29, 2026</p>
+  </div>
+  <canvas class="mesh" data-hue="170" aria-hidden="true"></canvas>
+</div>
+
+<!-- ============ CONTEXT ============ -->
+<section class="s-intro" id="intro">
+  <div class="wrap">
+    <h2 data-num="01" class="reveal">What is a &Lambda; star?</h2>
+    <p class="reveal">
+      This project reproduces and extends the draft
+      &ldquo;&Lambda; stars: the nontrivial influence of the cosmological constant
+      on stellar objects&rdquo; (Lopes &amp; Okawa). The question is simple to
+      state: what does a star look like when the cosmological constant is
+      negative, so that spacetime is anti-de Sitter (AdS)?
+    </p>
+    <p class="reveal">
+      Moving the cosmological constant to the matter side of Einstein's equation
+      turns it into an effective fluid, with density \(\rho-L\) and pressure
+      \(P+L\), where \(L=-\Lambda/\kappa_G\). For low-density stars this behaves
+      like the bag constant of the MIT bag model, so these objects resemble
+      quark stars in flat spacetime.
+    </p>
+    <p class="reveal">
+      The draft sets out how to construct the stars. This project adds their
+      radial stability: for each family of stars, which oscillation modes
+      grow, and at which central density does that start?
+    </p>
+  </div>
+</section>
+
+<!-- ============ MODEL ============ -->
+<section class="s-setup" id="model">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,35 C240,75 480,0 720,35 S1200,70 1440,30 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="02" class="reveal">A static fluid ball</h2>
+
+    <p class="reveal">
+      The star is static and spherically symmetric, made of a perfect fluid with
+      a polytropic equation of state. I use units with \(l=1\) and
+      \(\kappa\equiv\kappa_G l^2=8\pi\).
+    </p>
+
+    <div class="card eq reveal">
+      <p><strong>Metric</strong> (the AdS boundary is at \(x=\pi/2\), and the areal radius is \(l\tan x\)):</p>
+      \begin{equation} ds^2=\frac{l^2}{\cos^2x}\Big(-f(x)^2dt^2+g(x)^2dx^2+\sin^2x\,d\Omega_2^2\Big) \end{equation}
+      <p><strong>Field equations and matter</strong>, with \(\Lambda=-3/l^2\):</p>
+      \begin{equation} G_{\mu\nu}+\Lambda g_{\mu\nu}=\kappa_G T_{\mu\nu},\qquad
+      T_{\mu\nu}=(\rho+P)u_\mu u_\nu+P g_{\mu\nu} \end{equation}
+      <p><strong>Equation of state</strong>:</p>
+      \begin{equation} P=k\,\rho^{1+1/n} \end{equation}
+    </div>
+
+    <p class="reveal">
+      The tt and xx components, together with energy-momentum conservation,
+      reduce to two first-order ODEs for \(g(x)\) and \(\rho(x)\):
+    </p>
+
+    <div class="card eq reveal">
+      \begin{equation} g'=\frac{g^3\tan x}{2}\Big[\kappa\rho-\csc^2x+\frac{2}{g^2}+\frac{1}{g^2\sin^2x}-2\Big] \end{equation}
+      \begin{equation} \rho'=-\frac{\rho^{1-1/n}\big(1+k\rho^{1/n}\big)}{k\,(1+1/n)}
+      \Big[g^2\tan x\Big(1+\frac{\kappa}{2}P\Big)+\frac{g^2-1}{2\sin x\cos x}\Big] \end{equation}
+    </div>
+
+    <p class="reveal">
+      The time function \(f\) decouples. It is recovered afterwards, with
+      \(f(x_S)=1/g(x_S)\) so that \(f\to1\) at the boundary.
+    </p>
+
+    <h3 class="reveal">Boundary conditions</h3>
+    <p class="reveal">
+      A star is a solution on \([0,x_S]\) with a regular centre and a surface
+      where the density vanishes. The surface radius \(x_S\) is itself unknown.
+      Outside, the solution is exactly Schwarzschild&ndash;AdS.
+    </p>
+    <div class="card eq reveal">
+      <p><strong>Centre</strong> (this also gives \(\rho'(0)=0\)):</p>
+      \begin{equation} g(x)=1+\frac{\kappa\rho_c}{6}x^2+O(x^4) \end{equation}
+      <p><strong>Surface</strong> and <strong>exterior</strong>, with \(\mu=2GM\):</p>
+      \begin{equation} \rho(x_S)=0,\qquad g(x)^{-2}=1-\mu\,\frac{\cos^3x}{\sin x}\quad(x>x_S) \end{equation}
+      <p><strong>Mass</strong>, read off from the surface value of \(g\):</p>
+      \begin{equation} M=\frac{\big(1-g(x_S)^{-2}\big)\sin x_S}{2G\cos^3x_S} \end{equation}
+    </div>
+    <p class="reveal">
+      One more condition closes the problem: either the central density
+      \(\rho_c\) or the mass \(M\) is prescribed.
+    </p>
+  </div>
+</section>
+
+<!-- ============ SOLVING ============ -->
+<section class="s-solve" id="solving">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,30 C300,0 540,75 800,35 S1200,0 1440,40 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="03" class="reveal">Solving it with W4</h2>
+    <p class="reveal">
+      I solve the whole boundary-value problem at once, as a nonlinear system
+      \(F(u)=0\), with the
+      <a href="https://arxiv.org/abs/1809.04495" target="_blank">W4 method</a>.
+      It follows a damped second-order flow, discretised with explicit Euler,
+      using the UDL decomposition \(J=UDL\) of the Jacobian:
+    </p>
+    <div class="card eq formula reveal">\[ x_{n+1}=x_n+\Delta\tau\,L^{-1}p_n,\qquad
+      p_{n+1}=(1-2\Delta\tau)\,p_n-\Delta\tau\,D^{-1}U^{-1}F(x_n) \]</div>
+    <p class="reveal">with \(0&lt;\Delta\tau&lt;1\). Near a solution the error eigenvalue is \(1-\Delta\tau\).</p>
+
+    <h3 class="reveal">The discretisation</h3>
+    <p class="reveal">
+      The unknown vector is \(u=[x_S,\,g_0,w_0,\,g_1,w_1,\dots,g_N,w_N]\), on a
+      mesh \(x=x_S\,s^{\mathrm{grade}}\) with \(s\) uniform in \([0,1]\). A grade
+      above 1 clusters nodes near the centre, which large central densities
+      need. Each interval uses the midpoint rule, so \(\tan x\) and
+      \(1/\sin x\) are never evaluated at \(x=0\). The scheme is second order.
+    </p>
+
+    <div class="callout good reveal">
+      <h4>A change of variable</h4>
+      <p>
+        Near the surface \(\rho\sim(x_S-x)^n\), which is singular for \(n&lt;1\).
+        I evolve \(w=\rho^{1/n}\) instead, which crosses zero linearly for every
+        \(n\), and recover \(\rho=|w|^n\) afterwards.
+      </p>
+    </div>
+
+    <div class="callout note reveal">
+      <h4>Why the order of the unknowns matters</h4>
+      <p>
+        It does not change the solution, nor the determinant or the eigenvalues
+        of the Jacobian, since reordering the unknowns is a similarity
+        transformation. It changes the UDL factorisation. W4 uses that
+        factorisation without pivoting, which needs the trailing (bottom-right)
+        principal minors to be non-zero, and an invertible matrix can have a
+        zero one. The iteration also applies \(L^{-1}\), \(U^{-1}\) and
+        \(D^{-1}\) at every step, so its path to the solution depends on how
+        well conditioned those factors are, even though its fixed point does not.
+      </p>
+      <p>
+        With \(x_S\) first and \(g,w\) interleaved, \(\mathrm{cond}(L)\approx60\)
+        and W4 converges from poor starting guesses. With \(x_S\) last there is
+        a zero pivot, and grouping all \(g\) before all \(w\) fails too. The
+        interleaved order with \(x_S\) last has \(\mathrm{cond}(L)\approx10^8\).
+      </p>
+    </div>
+
+    <h3 class="reveal">Finding and checking solutions</h3>
+    <p class="reveal">
+      A run starts from a simple linear profile and, if W4 fails, retries from a
+      smaller star with a smaller step. Families of stars are followed by
+      continuation in \(\rho_c\) or in \(M\). For \(N&gt;100\) a sparse Jacobian
+      (seven-colour column colouring) and a sparse UDL keep it fast. I compare
+      the solutions with an independent shooting integration
+      (<code>solve_ivp</code>, rtol 1e-12).
+    </p>
+    <p class="reveal">
+      The family scans use \(N=2000\) with grade 2 and follow
+      \(\rho_c\) from 0.01 up to \(10^7\). The \(n=1\) and \(n=0.5\) scans
+      stop earlier, at \(1.1\times10^6\) and \(2.5\times10^4\). Below,
+      &ldquo;the range scanned&rdquo; refers to this.
+    </p>
+  </div>
+</section>
+
+<!-- ============ STARS ============ -->
+<section class="s-bound" id="stars">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,40 C260,75 520,5 760,38 S1220,72 1440,28 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="04" class="reveal">What the stars look like</h2>
+    <p class="reveal">
+      Fix a small mass, \(M=10^{-3}\) with \(k=1\), and vary the polytropic
+      index \(n\). The left panel below shows the result. As \(n\) grows the
+      central density drops and the star gets larger. Every profile ends in a
+      sharp drop at the surface.
+    </p>
+
+    <figure class="figure plate reveal">
+      <img class="plot" src="img/stars_n_family.png" width="1300" height="520" alt="Left: density profiles for n from 0.5 to 2 at M=0.001. Right: mass against surface radius for n from 0.5 to 5, with a dot at the first mass maximum of each curve">
+      <figcaption>Left: density profiles at \(M=10^{-3}\), \(k=1\). Right: mass against surface radius for each family. The dots mark the first mass maximum.</figcaption>
+    </figure>
+
+    <p class="reveal">
+      The right panel follows each family beyond the low-mass regime. Along a
+      curve the mass rises to a maximum and then curls back. Both the maximum
+      mass and the radius at which it occurs grow with \(n\): from
+      \(M_{\max}=0.1555\) at \(x_S=0.3848\) for \(n=0.5\), to \(0.7859\) at
+      \(x_S=1.484\) for \(n=5\). The AdS boundary is at \(x=\pi/2\approx1.571\),
+      so the largest stars nearly fill the space.
+    </p>
+
+    <div class="tablewrap reveal">
+      <table class="data">
+        <caption>Stars of mass 10<sup>-3</sup> with k = 1 (N = 1000). Radii are in the conformal coordinate x.</caption>
+        <thead><tr><th>n</th><th>&rho;<sub>c</sub></th><th>x<sub>S</sub></th><th>(g(x<sub>S</sub>) &minus; 1) &times; 10<sup>3</sup></th></tr></thead>
+        <tbody>
+          <tr><td>0.5</td><td>0.1063</td><td>0.1561</td><td>6.26</td></tr>
+          <tr><td>0.7</td><td>0.05310</td><td>0.2070</td><td>4.59</td></tr>
+          <tr><td>1</td><td>0.02322</td><td>0.2902</td><td>3.09</td></tr>
+          <tr><td>1.5</td><td>0.008488</td><td>0.4384</td><td>1.75</td></tr>
+          <tr><td>2</td><td>0.004103</td><td>0.5883</td><td>1.04</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="reveal">
+      The constant \(k\) matters too. For \(n=1\) and the same mass,
+      \(k=0.5,\,1,\,2\) give \(x_S=0.2523,\,0.2902,\,0.3328\).
+    </p>
+  </div>
+</section>
+
+<!-- ============ PERTURBATIONS ============ -->
+<section class="s-problem" id="stability">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,28 C300,70 540,0 820,40 S1200,70 1440,34 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="05" class="reveal">Will it stay a star?</h2>
+    <p class="reveal">
+      Having a static solution does not mean it is stable. To test it, I perturb
+      the fluid with a radial Lagrangian displacement
+      \(\zeta=\xi(x)\,e^{i\omega t}\) and linearise the Einstein equations. The
+      time-time, time-radial and radial-radial components and the Euler
+      equation reduce to one master equation for \(\zeta\). The metric
+      perturbation \(f_1\) drops out. With \(h=\rho+P\), \(c_s^2=dP/d\rho\) and
+      \(\Theta=c_s^2h\):
+    </p>
+    <div class="card eq formula reveal">\[ \frac{h g^2}{f^2}\,\zeta_{tt}=(\Theta Q)'+\sigma\,\Theta Q-\beta\,\zeta,
+      \qquad Q=\zeta'+K\zeta \]</div>
+    <p class="reveal">
+      Here \(K\), \(\sigma\) and \(\beta\) are built from the background star.
+      They are listed in the <a href="derivation.html">technical notes</a>.
+    </p>
+
+    <p class="reveal">
+      This is a Sturm&ndash;Liouville problem. With \(E=f g\sin^2x/\cos^4x\) and
+      \(W=hg^2/f^2\), every mode satisfies the variational principle
+    </p>
+    <div class="card eq formula reveal">
+      \[ \omega^2=\frac{\int_0^{x_S}E\,\big(\Theta Q^2+\beta\,\xi^2\big)\,dx}{\int_0^{x_S}E\,W\,\xi^2\,dx} \]
+    </div>
+    <p class="reveal">
+      A negative \(\omega^2\) means the mode grows, so the star is unstable. I
+      discretise the problem with linear finite elements on the star's own grid.
+      That gives a symmetric generalised eigenproblem with tridiagonal matrices.
+      The number of unstable modes comes from a Sturm count of the negative
+      eigenvalues, and a star is flagged unstable if any
+      \(\omega^2&lt;-10^{-6}\).
+    </p>
+
+    <h3 class="reveal">What happens at the surface</h3>
+    <p class="reveal">
+      The centre needs \(\xi(0)=0\), but the surface is where the density
+      vanishes, and a boundary condition there needs care. Near the surface, with
+      \(s=x_S-x\), the indicial equation is \(\alpha(\alpha+n)=0\). So there are
+      two branches, \(\xi\sim\text{const}\) and \(\xi\sim s^{-n}\). Two panels
+      show why only the first one is physical.
+    </p>
+
+    <figure class="figure plate reveal">
+      <img class="plot" src="img/surface_branches.png" width="1200" height="470" alt="Left: displacement of the fundamental mode near the surface, finite for the physical branch and diverging for the excluded one. Right: accumulated energy, converging for the physical branch and diverging for the excluded one">
+      <figcaption>The fundamental mode of the \(n=3\), \(\rho_c=0.5\) star (\(\omega^2=-0.457\)) near the surface. Left: displacement. Right: accumulated energy.</figcaption>
+    </figure>
+    <p class="reveal">
+      The physical branch stays finite as \(s\to0\), while the other grows like
+      \(s^{-n}\). Its energy also diverges, which is what rules it out. The finite
+      branch gives \(\Delta p=-\Theta Q\to0\) automatically, so the surface is
+      free to oscillate. The <a href="derivation.html">technical notes</a> have the
+      full six-panel version, which also confirms that \(h\), \(\Theta\) and
+      \(\Delta p\) vanish as the expected powers of \(s\).
+    </p>
+  </div>
+</section>
+
+<!-- ============ MODES ============ -->
+<section class="s-results" id="modes">
+  <canvas class="mesh" data-hue="200" aria-hidden="true"></canvas>
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,34 C240,0 500,70 760,36 S1180,0 1440,38 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="06" class="reveal">Following the modes</h2>
+    <p class="reveal">
+      For each star the problem gives a ladder of eigenvalues
+      \(\omega_0^2&lt;\omega_1^2&lt;\dots\). The star is stable if all of them are
+      positive. Two questions are worth a look: what a mode is, and how the
+      ladder moves as the central density grows.
+    </p>
+
+    <h3 class="reveal">What a mode looks like</h3>
+    <p class="reveal">
+      Here are the four lowest modes of a stable \(n=1\) star with
+      \(\rho_c=0.555\). The displacement is
+      \(\zeta(x,t)=\xi(x)\cos\omega t\), so every point of the star moves back
+      and forth at the same frequency with a fixed profile.
+    </p>
+    <figure class="figure plate reveal">
+      <img class="plot" src="img/modes_n1_oscillation.png" width="1500" height="400" alt="The four lowest radial modes of an n=1 star with rho_c=0.555, drawn as the profile at the start of the cycle, at half a cycle, and at two intermediate phases, with the swept region shaded">
+      <figcaption>The four lowest modes of the \(n=1\), \(\rho_c=0.555\) star, each normalised to 1. Solid: start of a cycle. Dashed: half a cycle later. Thin: \(\cos\omega t=\pm\tfrac12\). Shading: region swept.</figcaption>
+    </figure>
+    <p class="reveal">
+      Because the problem is Sturm&ndash;Liouville, mode \(i\) has \(i\) nodes,
+      the points where the curves cross and the fluid does not move, and
+      \(\omega_i^2\) increases with \(i\). Here
+      \(\omega^2=1.41,\,11.2,\,24.3,\,41.5\), in units where \(l=1\) and time is
+      the boundary time. In these modes the displacement is largest at the
+      surface, which is free to move.
+    </p>
+
+    <h3 class="reveal">The ladder along a sequence</h3>
+    <p class="reveal">
+      A larger polytropic index makes the changes easier to see, because in the
+      range I scanned the family has more turning points. So I follow
+      \(n=5\), \(k=1\), the largest index I scanned, as \(\rho_c\) grows. Its stars have \(x_S\approx1.48\), close to the AdS boundary at \(\pi/2\).
+    </p>
+
+    <figure class="figure plate reveal">
+      <img class="plot" src="img/modes_n5_spectrum.png" width="1100" height="820" alt="For n=5, k=1: the mass against central density, with four extrema marked, above the four lowest omega squared values against central density, each crossing zero at one of the extrema">
+      <figcaption>\(n=5\), \(k=1\), scanned up to \(\rho_c=10^7\). Top: the mass, with its four extrema marked. Bottom: the four lowest \(\omega_i^2\).</figcaption>
+    </figure>
+
+    <p class="reveal">
+      Read the figure from left to right. At small \(\rho_c\) all four
+      eigenvalues are positive, so the star is stable. The lowest one crosses zero at \(\rho_c=0.2499\), exactly where \(M(\rho_c)\) peaks. A zero mode is a static
+      perturbation, a neighbouring equilibrium, and in a one-parameter family
+      those exist where the mass is extremal. After the crossing \(\omega_0^2\)
+      keeps falling and settles near \(-1.77\). The pattern then repeats: each
+      next eigenvalue crosses zero at the next extremum of \(M\), and settles
+      near \(-0.80\) and \(-0.17\). The fourth is still moving at \(\rho_c=10^7\), where it is \(-0.005\). The four crossing densities are in the \(n=5\) row of the table in section 7. In the range scanned, each
+      crossing adds one unstable mode and none is removed, so the count goes
+      \(0\to1\to2\to3\to4\).
+    </p>
+
+    <div class="callout note reveal">
+      <h4>Four is what the scan covers</h4>
+      <p>
+        Four extrema is what \(\rho_c\le10^7\) contains. It is not a claim that
+        there are no more. \(M(\rho_c)\) oscillates around a limit near
+        \(0.5727\), the excursions shrink quickly, and the spacing of the extrema
+        in \(\rho_c\) grows. There could be further extrema at larger
+        \(\rho_c\), each fainter and harder to resolve. By the same turning-point
+        argument each would be expected to bring another mode through zero, but
+        I have not computed them.
+      </p>
+    </div>
+
+    <h3 class="reveal">The unstable modes</h3>
+    <figure class="figure plate reveal">
+      <img class="plot" src="img/modes_n5_eigenfunctions.png" width="1100" height="470" alt="The four lowest eigenfunctions for two n=5 stars, with central densities 94 and ten million, unstable modes dashed">
+      <figcaption>The four lowest eigenfunctions of two \(n=5\) stars, normalised to a peak of 1. Unstable modes are dashed.</figcaption>
+    </figure>
+    <p class="reveal">
+      At \(\rho_c=94\) the two lowest modes are unstable, and at
+      \(\rho_c=10^7\) all four are. The unstable ones are always the lowest, in
+      order, as the ladder requires, and the node count still equals the mode
+      number. Unlike in the stable star above, the displacement is no longer
+      largest at the surface, and at large \(\rho_c\) the nodes of the higher
+      modes crowd into the inner part of the star.
+    </p>
+  </div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section class="s-solve" id="results">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,30 C300,0 540,75 800,35 S1200,0 1440,40 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="07" class="reveal">Checks and other indices</h2>
+
+    <h3 class="reveal">How I checked it</h3>
+    <ul class="reveal">
+      <li>
+        The linearised equations and their reduction to the master equation were
+        verified symbolically. The residuals vanish at random background points
+        to about 1e-12 to 1e-14.
+      </li>
+      <li>
+        The W4 profiles agree with the independent shooting integration (section 3).
+      </li>
+      <li>
+        The turning-point rule holds. For \(n=1\) the first mode crosses zero at
+        \(\rho_c=0.89226\), where the mass peaks at \(M_{\max}=0.190024\), and
+        the two agree to the five digits I resolved. For \(n=5\) the crossing is
+        at \(0.249865\) and the maximum-mass point on the \(\rho_c\) grid is at
+        \(0.249883\). This is a non-trivial check of the whole chain, because
+        \(\omega^2\) comes from the perturbation equation and \(M\) from the
+        static equations.
+      </li>
+      <li>The eigenvalue converges at second order with the grid: the differences shrink by about 4 at each doubling of N.</li>
+    </ul>
+    <div class="tablewrap reveal">
+      <table class="data">
+        <caption>Fundamental mode of the n = 1 star at &rho;<sub>c</sub> = 0.5 against the number of grid intervals N.</caption>
+        <thead><tr><th>N</th><th>100</th><th>200</th><th>400</th><th>800</th><th>1600</th><th>3200</th></tr></thead>
+        <tbody><tr><td>&omega;<sub>0</sub>&sup2;</td><td>1.744278</td><td>1.744735</td><td>1.744846</td><td>1.744873</td><td>1.744880</td><td>1.744881</td></tr></tbody>
+      </table>
+    </div>
+
+    <h3 class="reveal">Other polytropic indices</h3>
+    <p class="reveal">
+      The other indices behave like \(n=5\): each time a mode turns unstable,
+      \(M(\rho_c)\) has an extremum there. In the range scanned, the number of
+      unstable modes at large \(\rho_c\) tends to grow with \(n\).
+    </p>
+
+    <div class="tablewrap reveal">
+      <table class="data">
+        <caption>Central density \(\rho_c\) at which the number of unstable modes increases (k = 1). M is the mass at the first change. A dash means no change in the range scanned.</caption>
+        <thead><tr><th>n</th><th>M at 0&rarr;1</th><th>0&rarr;1</th><th>1&rarr;2</th><th>2&rarr;3</th><th>3&rarr;4</th></tr></thead>
+        <tbody>
+          <tr><td>0.5</td><td>0.1555</td><td>1.390</td><td>&ndash;</td><td>&ndash;</td><td>&ndash;</td></tr>
+          <tr><td>1</td><td>0.1900</td><td>0.8923</td><td>421.7</td><td>&ndash;</td><td>&ndash;</td></tr>
+          <tr><td>1.5</td><td>0.2406</td><td>0.6217</td><td>35.71</td><td>&ndash;</td><td>&ndash;</td></tr>
+          <tr><td>2</td><td>0.2994</td><td>0.4826</td><td>20.75</td><td>2.384&times;10<sup>6</sup></td><td>&ndash;</td></tr>
+          <tr><td>2.5</td><td>0.3643</td><td>0.4016</td><td>15.80</td><td>5668</td><td>&ndash;</td></tr>
+          <tr><td>3</td><td>0.4348</td><td>0.3492</td><td>13.25</td><td>1690</td><td>&ndash;</td></tr>
+          <tr><td>5</td><td>0.7859</td><td>0.2499</td><td>9.133</td><td>484.2</td><td>9.374&times;10<sup>4</sup></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="reveal">
+      Putting these counts back into the mass&ndash;radius sequences of
+      section 4 gives one picture. Each point is a star, coloured by its number of
+      unstable modes. Every family starts on a blue branch and turns red at its
+      first mass maximum, and the later colour changes sit near the end of the
+      spiral. Larger \(n\) shows more colours, and \(n=0.5\) only reaches red in
+      the range scanned.
+    </p>
+    <figure class="figure plate reveal">
+      <img class="plot" src="img/families_by_unstable_modes.png" width="1200" height="1020" alt="Mass against surface radius for n equal to 0.5, 1, 2 and 5, with points coloured blue for stable stars, red for one unstable mode, orange for two and purple for three or more">
+      <figcaption>Mass against surface radius, \(k=1\). Blue: stable. Red and orange: one and two unstable modes. Purple: three or more.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ CLOSING ============ -->
+<section class="s-end" id="end">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,36 C300,70 560,0 840,34 S1220,66 1440,30 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h3 class="reveal">Limits of this analysis</h3>
+    <ul class="reveal">
+      <li>The scans stop at \(\rho_c=10^7\) (earlier for \(n=1\) and \(n=0.5\)), so I cannot say whether more extrema of \(M\), and more unstable modes, appear beyond.</li>
+      <li>The perturbations use the barotropic law \(\delta P=c_s^2\,\delta\rho\), not a fixed-rest-mass adiabatic law.</li>
+      <li>Frequencies are measured in boundary time, with \(f\to1\) at the boundary. The sign of \(\omega^2\) does not depend on that normalisation.</li>
+      <li>Only \(n=1\) was scanned in \(k\) (0.5, 1 and 2). The other families use \(k=1\).</li>
+      <li>For \(n=0.5\) the scan lists a few tiny extrema of \(M\) at \(\rho_c\sim10^4\). They are numerical noise on a flat plateau, not real turning points.</li>
+    </ul>
+    <p class="reveal signoff">
+      I never had the chance to look into the stability of these stars before.
+      This period finally gave me the opportunity, and going from a static
+      solution to a full ladder of oscillation modes feels like another small
+      victory.
+    </p>
+    <div class="footer-links reveal">
+      Posted October 29, 2026.
+      <!-- Add the code link here once the repository exists, as on the wave-simulation page. -->
+      The full derivation, with every step of both the static equations and the stability problem,
+      is in the <a href="derivation.html">technical notes</a>.
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script src="../post.js"></script>
+</body>
+</html>
