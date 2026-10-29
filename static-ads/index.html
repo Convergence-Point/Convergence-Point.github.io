@@ -140,7 +140,7 @@
   <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,30 C300,0 540,75 800,35 S1200,0 1440,40 V70 H0Z"/></svg>
   <div class="wrap">
     <h2 data-num="03" class="reveal">Solving it with W4</h2>
-    <p class="reveal">
+    <p class="reveal key">
       I solve the whole boundary-value problem at once, as a nonlinear system
       \(F(u)=0\), with the
       <a href="https://arxiv.org/abs/1809.04495" target="_blank">W4 method</a>.
@@ -150,6 +150,27 @@
     <div class="card eq formula reveal">\[ x_{n+1}=x_n+\Delta\tau\,L^{-1}p_n,\qquad
       p_{n+1}=(1-2\Delta\tau)\,p_n-\Delta\tau\,D^{-1}U^{-1}F(x_n) \]</div>
     <p class="reveal">with \(0&lt;\Delta\tau&lt;1\). Near a solution the error eigenvalue is \(1-\Delta\tau\).</p>
+
+    <div class="callout note reveal">
+      <h4>W4 as a damped oscillator</h4>
+      <p>
+        The iteration behaves like a damped oscillator that settles into the
+        solution. Near a solution \(F\approx J\,\delta x\) with \(J=UDL\), so
+        \(D^{-1}U^{-1}F\approx L\,\delta x\). In the variable \(q=L^{-1}p\) the error
+        obeys \(\delta x_{n+1}=\delta x_n+\Delta\tau\,q_n\) and
+        \(q_{n+1}=(1-2\Delta\tau)\,q_n-\Delta\tau\,\delta x_n\). In continuous time
+        this is \(\ddot a+2\dot a+a=0\) for every component \(a\) of the error, a
+        unit mass on a unit spring with friction coefficient 2.
+      </p>
+      <p>
+        That friction is exactly critical damping: the error returns to zero as
+        \((c_1+c_2t)\,e^{-t}\), as fast as possible without overshooting or
+        oscillating. The discrete eigenvalue is \(1-\Delta\tau\), twice. The factors
+        \(L\) and \(U\) cancel the Jacobian, so every component behaves like this
+        same oscillator whatever \(J\) is. The settling belongs to the solver, not
+        to the star: W4 converges to unstable stars as well as stable ones.
+      </p>
+    </div>
 
     <h3 class="reveal">The discretisation</h3>
     <p class="reveal">
@@ -229,8 +250,7 @@
       curve the mass rises to a maximum and then curls back. Both the maximum
       mass and the radius at which it occurs grow with \(n\): from
       \(M_{\max}=0.1555\) at \(x_S=0.3848\) for \(n=0.5\), to \(0.7859\) at
-      \(x_S=1.484\) for \(n=5\). The AdS boundary is at \(x=\pi/2\approx1.571\),
-      so the largest stars nearly fill the space.
+      \(x_S=1.484\) for \(n=5\). The AdS boundary is at \(x=\pi/2\approx1.571\).
     </p>
 
     <div class="tablewrap reveal">
@@ -282,7 +302,7 @@
     <div class="card eq formula reveal">
       \[ \omega^2=\frac{\int_0^{x_S}E\,\big(\Theta Q^2+\beta\,\xi^2\big)\,dx}{\int_0^{x_S}E\,W\,\xi^2\,dx} \]
     </div>
-    <p class="reveal">
+    <p class="reveal key">
       A negative \(\omega^2\) means the mode grows, so the star is unstable. I
       discretise the problem with linear finite elements on the star's own grid.
       That gives a symmetric generalised eigenproblem with tridiagonal matrices.
@@ -293,24 +313,35 @@
 
     <h3 class="reveal">What happens at the surface</h3>
     <p class="reveal">
-      The centre needs \(\xi(0)=0\), but the surface is where the density
-      vanishes, and a boundary condition there needs care. Near the surface, with
-      \(s=x_S-x\), the indicial equation is \(\alpha(\alpha+n)=0\). So there are
-      two branches, \(\xi\sim\text{const}\) and \(\xi\sim s^{-n}\). Two panels
-      show why only the first one is physical.
+      The master equation is second order, so it needs one condition at each
+      end. At the centre it is \(\xi(0)=0\). The surface is harder, because
+      there the equation is singular: the density vanishes, so
+      \(\Theta\sim s^{n+1}\to0\) with \(s=x_S-x\), and the coefficient of the
+      highest derivative goes to zero. Near a singular point like this the
+      solutions are power laws, \(\xi\sim s^\alpha\), and the exponents satisfy
+      \(\alpha(\alpha+n)=0\).
+    </p>
+    <p class="reveal">
+      That leaves two behaviours. The regular branch, \(\alpha=0\), tends to a
+      finite value at the surface. The singular branch, \(\alpha=-n\), diverges
+      there. A mode needs finite energy, because \(\omega^2\) is a ratio of
+      energy integrals (the variational formula above), so the energy should
+      decide between them. The two panels below check this for \(n=3\).
     </p>
 
     <figure class="figure plate reveal">
-      <img class="plot" src="img/surface_branches.png" width="1200" height="470" alt="Left: displacement of the fundamental mode near the surface, finite for the physical branch and diverging for the excluded one. Right: accumulated energy, converging for the physical branch and diverging for the excluded one">
+      <img class="plot" src="img/surface_branches.png" width="1200" height="470" alt="Left: displacement of the fundamental mode near the surface, finite for the regular branch and diverging for the singular one. Right: accumulated energy, converging for the regular branch and diverging for the singular one">
       <figcaption>The fundamental mode of the \(n=3\), \(\rho_c=0.5\) star (\(\omega^2=-0.457\)) near the surface. Left: displacement. Right: accumulated energy.</figcaption>
     </figure>
-    <p class="reveal">
-      The physical branch stays finite as \(s\to0\), while the other grows like
-      \(s^{-n}\). Its energy also diverges, which is what rules it out. The finite
-      branch gives \(\Delta p=-\Theta Q\to0\) automatically, so the surface is
-      free to oscillate. The <a href="derivation.html">technical notes</a> have the
-      full six-panel version, which also confirms that \(h\), \(\Theta\) and
-      \(\Delta p\) vanish as the expected powers of \(s\).
+    <p class="reveal key">
+      The regular branch stays finite and its energy converges. The singular
+      branch grows like \(s^{-n}\) and its energy diverges, so it is discarded.
+      The regular branch also gives \(\Delta p=-\Theta Q\to0\) automatically, so
+      the pressure perturbation vanishes at the surface without imposing
+      anything, and \(\xi\) itself is free there: the surface oscillates. The
+      <a href="derivation.html">technical notes</a> have the full six-panel
+      version, which also confirms that \(h\), \(\Theta\) and \(\Delta p\) vanish
+      as the expected powers of \(s\).
     </p>
   </div>
 </section>
@@ -356,13 +387,14 @@
     </p>
 
     <figure class="figure plate reveal">
-      <img class="plot" src="img/modes_n5_spectrum.png" width="1100" height="820" alt="For n=5, k=1: the mass against central density, with four extrema marked, above the four lowest omega squared values against central density, each crossing zero at one of the extrema">
-      <figcaption>\(n=5\), \(k=1\), scanned up to \(\rho_c=10^7\). Top: the mass, with its four extrema marked. Bottom: the four lowest \(\omega_i^2\).</figcaption>
+      <img class="plot" src="img/modes_n5_spectrum.png" width="1300" height="860" alt="For n=5, k=1: the mass against central density, with four extrema marked, above the four lowest omega squared against central density. Each curve passes from the positive, stable region into a shaded negative, unstable region at a ringed point under one of the extrema">
+      <figcaption>\(n=5\), \(k=1\), scanned up to \(\rho_c=10^7\). Top: the mass, with its four extrema marked. Bottom: the four lowest \(\omega_i^2\), on an axis that is linear near zero and logarithmic beyond \(\pm0.01\). The shading is \(\omega^2&lt;0\) and the rings mark the sign changes.</figcaption>
     </figure>
 
-    <p class="reveal">
+    <p class="reveal key">
       Read the figure from left to right. At small \(\rho_c\) all four
-      eigenvalues are positive, so the star is stable. The lowest one crosses zero at \(\rho_c=0.2499\), exactly where \(M(\rho_c)\) peaks. A zero mode is a static
+      eigenvalues are positive, so the star is stable. Each curve later drops into the
+      shaded unstable region at a ringed point. The lowest one crosses zero at \(\rho_c=0.2499\), exactly where \(M(\rho_c)\) peaks. A zero mode is a static
       perturbation, a neighbouring equilibrium, and in a one-parameter family
       those exist where the mass is extremal. After the crossing \(\omega_0^2\)
       keeps falling and settles near \(-1.77\). The pattern then repeats: each
@@ -384,20 +416,6 @@
         I have not computed them.
       </p>
     </div>
-
-    <h3 class="reveal">The unstable modes</h3>
-    <figure class="figure plate reveal">
-      <img class="plot" src="img/modes_n5_eigenfunctions.png" width="1100" height="470" alt="The four lowest eigenfunctions for two n=5 stars, with central densities 94 and ten million, unstable modes dashed">
-      <figcaption>The four lowest eigenfunctions of two \(n=5\) stars, normalised to a peak of 1. Unstable modes are dashed.</figcaption>
-    </figure>
-    <p class="reveal">
-      At \(\rho_c=94\) the two lowest modes are unstable, and at
-      \(\rho_c=10^7\) all four are. The unstable ones are always the lowest, in
-      order, as the ladder requires, and the node count still equals the mode
-      number. Unlike in the stable star above, the displacement is no longer
-      largest at the surface, and at large \(\rho_c\) the nodes of the higher
-      modes crowd into the inner part of the star.
-    </p>
   </div>
 </section>
 
@@ -468,8 +486,8 @@
       the range scanned.
     </p>
     <figure class="figure plate reveal">
-      <img class="plot" src="img/families_by_unstable_modes.png" width="1200" height="1020" alt="Mass against surface radius for n equal to 0.5, 1, 2 and 5, with points coloured blue for stable stars, red for one unstable mode, orange for two and purple for three or more">
-      <figcaption>Mass against surface radius, \(k=1\). Blue: stable. Red and orange: one and two unstable modes. Purple: three or more.</figcaption>
+      <img class="plot" src="img/families_by_unstable_modes.png" width="1200" height="1020" alt="Mass against surface radius for n equal to 0.5, 1, 2 and 5, with points coloured blue for stable stars, red for one unstable mode, orange for two and purple for three or more, and a zoomed inset of the end of the n equal 5 spiral">
+      <figcaption>Mass against surface radius, \(k=1\). Blue: stable. Red and orange: one and two unstable modes. Purple: three or more. Inset: the end of the \(n=5\) spiral.</figcaption>
     </figure>
   </div>
 </section>

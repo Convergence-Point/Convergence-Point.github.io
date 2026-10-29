@@ -219,3 +219,7 @@
   .figure.plate figcaption { position: relative; z-index: 1; margin-top: 1.4em; }
 
   .wrap > h3:first-child { margin-top: 0; }
+
+  /* key statements: a quiet accent bar and tint, lighter than a callout */
+  p.key { border-left: 3px solid var(--accent); padding: .5em 1em .5em 1.1em; margin: 1.4em 0;
+    background: linear-gradient(90deg, var(--badge), transparent 85%); border-radius: 0 10px 10px 0; color: var(--strong); }
