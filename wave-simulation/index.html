@@ -4,63 +4,280 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Why my wave simulation kept blowing up</title>
+<meta name="description" content="Simulating a massless scalar field in anti-de Sitter space, and why the obvious finite-difference scheme goes unstable.">
+<link rel="stylesheet" href="../theme.css">
+<script src="../theme.js"></script>
 <script>
+  document.documentElement.classList.add('js');  // lets the CSS hide .reveal items only when scripting works
   window.MathJax = { tex: { tags: 'ams' } };  // auto-number \begin{equation}
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <style>
-  /* Dark theme */
-  html { background: #000; }
-  body { margin: 0; font: normal 13px Arial, Tahoma, Helvetica, FreeSans, sans-serif; color: #fff; background: #000; line-height: 1.4; }
-  a:link { text-decoration: none; color: #888; }
-  a:visited { text-decoration: none; color: #888; }
-  a:hover { text-decoration: underline; color: #ccc; }
-  a:focus-visible { outline: 2px solid #f2a900; outline-offset: 2px; }
-  .content { max-width: 930px; margin: 0 auto; padding: 20px 15px 40px; }
-  .blog-title { font: normal bold 30px Arial, Tahoma, Helvetica, FreeSans, sans-serif; margin: 10px 0 20px; }
-  .blog-title a { color: #fff; }
-  article.post { background: #141414; padding: 15px 20px 20px; }
-  h1.post-title { font: normal bold 22px Arial, Tahoma, Helvetica, FreeSans, sans-serif; margin: 0 0 1em; color: #fff; }
-  .post-body { position: relative; font-size: 15px; line-height: 1.5; }
-  .post-body h2 { font: normal bold 18px Arial, Tahoma, Helvetica, FreeSans, sans-serif; color: #fff; margin: 1.2em 0 .5em; }
-  .post-body h3 { font: normal bold 16px Arial, Tahoma, Helvetica, FreeSans, sans-serif; color: #fff; margin: 1.2em 0 .5em; }
-  .post-body h4 { font: normal bold 14px Arial, Tahoma, Helvetica, FreeSans, sans-serif; color: #fff; margin: 1.2em 0 .5em; }
-  .post-body ul { padding: 0 2.5em; margin: .5em 0; list-style: disc; }
-  .post-body ul li { padding: .25em 0; margin-bottom: .25em; }
-  .post-body img { padding: 8px; background: #222; border: 1px solid transparent; max-width: 100%; height: auto; }
-  .separator { clear: both; }
-  .post-footer { margin: 1.5em 0 0; color: #666; font-size: 12px; border-top: 1px solid #222; padding-top: .8em; }
+  /* Dark is the default; theme.js sets data-theme="light" or "dark" on <html>. */
+  :root {
+    color-scheme: dark;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
+    --page: #05070d;
+    --text: #e8ebf2;
+    --strong: #fff;
+    --muted: #9aa3b5;
+    --lede: #c5ccdc;
+    --accent: #f2a900;
+    --on-accent: #111;
+    --link: #8ab4ff;
+    --link-hover: #b9d0ff;
+    --card: rgba(255, 255, 255, .045);
+    --card-border: rgba(255, 255, 255, .09);
+    --card-shadow: rgba(0, 0, 0, .25);
+    --topbar: rgba(5, 7, 13, .72);
+    --code: rgba(255, 255, 255, .08);
+    --badge: rgba(242, 169, 0, .15);
+    --ghost-border: rgba(255, 255, 255, .3);
+    --ghost-hover: rgba(255, 255, 255, .08);
+    --h1-a: #fff;
+    --h1-b: #9fc0ff;
+    --hero-bg: radial-gradient(1100px 600px at 20% 10%, rgba(80, 110, 255, .30), transparent 65%),
+               radial-gradient(900px 500px at 90% 90%, rgba(242, 169, 0, .16), transparent 65%),
+               linear-gradient(180deg, #070a18 0%, #0a0f24 100%);
+    --bad: #ff8a80;
+    --good: #6ee7b7;
+    --figure-bg: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    --figure-glow: rgba(70, 120, 255, .25);
+    /* section backgrounds, each with a soft colored glow */
+    --intro-bg: #0a0e1a;   --intro-glow: radial-gradient(900px 400px at 85% 10%, rgba(80, 120, 255, .12), transparent 70%);
+    --setup-bg: #0b1424;   --setup-glow: radial-gradient(900px 500px at 10% 0%, rgba(40, 160, 220, .14), transparent 70%),
+                                         radial-gradient(700px 400px at 100% 100%, rgba(80, 90, 255, .10), transparent 70%);
+    --bound-bg: #110f22;   --bound-glow: radial-gradient(800px 450px at 90% 20%, rgba(150, 90, 255, .14), transparent 70%);
+    --solve-bg: #0a1a1c;   --solve-glow: radial-gradient(900px 450px at 0% 30%, rgba(30, 200, 170, .12), transparent 70%);
+    --problem-bg: #1b0f14; --problem-glow: radial-gradient(900px 450px at 90% 10%, rgba(255, 90, 80, .13), transparent 70%);
+    --results-bg: #060b1c; --results-glow: radial-gradient(1000px 600px at 50% 40%, rgba(60, 110, 255, .18), transparent 70%);
+    --end-bg: #05070d;
+    /* theme switch (theme.css) */
+    --sw-bg: #0c1020;
+    --sw-border: var(--card-border);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --page: #eef2f1;
+    --text: #24312e;
+    --strong: #121d1b;
+    --muted: #5b6a66;
+    --lede: #3c4b47;
+    --accent: #a8650a;
+    --on-accent: #fff;
+    --link: #2a62c9;
+    --link-hover: #174aa8;
+    --card: rgba(255, 255, 255, .72);
+    --card-border: rgba(20, 40, 36, .13);
+    --card-shadow: rgba(30, 60, 55, .12);
+    --topbar: rgba(238, 242, 241, .78);
+    --code: rgba(20, 40, 36, .08);
+    --badge: rgba(168, 101, 10, .13);
+    --ghost-border: rgba(20, 40, 36, .3);
+    --ghost-hover: rgba(20, 40, 36, .06);
+    --h1-a: #16324f;
+    --h1-b: #2a62c9;
+    --hero-bg: radial-gradient(1100px 600px at 20% 10%, rgba(80, 130, 255, .20), transparent 65%),
+               radial-gradient(900px 500px at 90% 90%, rgba(242, 169, 0, .20), transparent 65%),
+               linear-gradient(180deg, #f6f9fb 0%, #e4edf3 100%);
+    --bad: #b3261e;
+    --good: #0f7a52;
+    --figure-bg: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(255, 255, 255, .55));
+    --figure-glow: rgba(70, 120, 255, .16);
+    --intro-bg: #f1f5f4;   --intro-glow: radial-gradient(900px 400px at 85% 10%, rgba(80, 120, 255, .10), transparent 70%);
+    --setup-bg: #e6f0f4;   --setup-glow: radial-gradient(900px 500px at 10% 0%, rgba(40, 160, 220, .14), transparent 70%),
+                                         radial-gradient(700px 400px at 100% 100%, rgba(80, 90, 255, .08), transparent 70%);
+    --bound-bg: #eeecf6;   --bound-glow: radial-gradient(800px 450px at 90% 20%, rgba(150, 90, 255, .12), transparent 70%);
+    --solve-bg: #e4f1ee;   --solve-glow: radial-gradient(900px 450px at 0% 30%, rgba(30, 200, 170, .14), transparent 70%);
+    --problem-bg: #f6eaea; --problem-glow: radial-gradient(900px 450px at 90% 10%, rgba(255, 90, 80, .12), transparent 70%);
+    --results-bg: #e5ebf7; --results-glow: radial-gradient(1000px 600px at 50% 40%, rgba(60, 110, 255, .16), transparent 70%);
+    --end-bg: #eef2f1;
+    --sw-bg: #f7faf9;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--page); scroll-behavior: smooth; scroll-padding-top: 64px; }
+  body { margin: 0; overflow-x: hidden; font: 16px/1.65 var(--font); color: var(--text); background: var(--page); }
+  a:link, a:visited { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; color: var(--link-hover); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+  p { margin: 0 0 1em; }
+
+  /* ---------- top bar ---------- */
+  .topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 18px;
+    padding: 10px 20px; background: var(--topbar); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--card-border); font-size: 14px; }
+  .topbar .home { font-weight: 700; white-space: nowrap; }
+  .topbar .home:link, .topbar .home:visited { color: var(--strong); }
+  .topbar nav { display: flex; gap: 4px; margin-left: auto; overflow-x: auto; min-width: 0; }
+  .topbar nav a:link, .topbar nav a:visited { color: var(--muted); padding: 4px 10px; border-radius: 999px;
+    white-space: nowrap; transition: color .25s, background .25s; }
+  .topbar nav a:hover { color: var(--strong); text-decoration: none; }
+  .topbar nav a.active { color: var(--on-accent); background: var(--accent); }
+
+  /* ---------- sections ---------- */
+  section { position: relative; padding: 110px 20px 90px; background-color: var(--bg); background-image: var(--glow, none); }
+  .wrap { max-width: 860px; margin: 0 auto; position: relative; z-index: 1; }
+  h1, h2, h3 { line-height: 1.2; margin: 0; }
+  h2 { font-size: 30px; margin-bottom: .6em; letter-spacing: -.01em; color: var(--strong); }
+  h2::before { content: attr(data-num); display: block; font-size: 13px; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .5em; }
+  h3 { font-size: 20px; margin: 1.6em 0 .5em; color: var(--strong); }
+
+  /* wave-shaped edge drawn over the bottom of the previous section */
+  .divider { position: absolute; left: 0; top: 1px; width: 100%; height: 70px; transform: translateY(-100%);
+    fill: var(--bg); display: block; pointer-events: none; }
+
+  .s-intro   { --bg: var(--intro-bg);   --glow: var(--intro-glow); }
+  .s-setup   { --bg: var(--setup-bg);   --glow: var(--setup-glow); }
+  .s-bound   { --bg: var(--bound-bg);   --glow: var(--bound-glow); }
+  .s-solve   { --bg: var(--solve-bg);   --glow: var(--solve-glow); }
+  .s-problem { --bg: var(--problem-bg); --glow: var(--problem-glow); }
+  .s-results { --bg: var(--results-bg); --glow: var(--results-glow); }
+  .s-end     { --bg: var(--end-bg); padding-bottom: 60px; }
+
+  /* ---------- hero ---------- */
+  .hero { position: relative; min-height: 78vh; display: flex; align-items: center; padding: 90px 20px 150px; overflow: hidden;
+    background: var(--hero-bg); }
+  .hero .wrap { max-width: 900px; z-index: 2; }
+  .kicker { color: var(--accent); font-size: 13px; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 1em; }
+  .hero h1 { font-size: clamp(34px, 6vw, 60px); letter-spacing: -.02em; margin-bottom: .45em;
+    background: linear-gradient(90deg, var(--h1-a) 30%, var(--h1-b) 100%); -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent; }
+  .hero .lede { font-size: 19px; color: var(--lede); max-width: 640px; }
+  .hero-meta { color: var(--muted); font-size: 14px; margin-top: 1.5em; }
+  .btns { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 2em; }
+  .btn:link, .btn:visited { display: inline-block; padding: 10px 20px; border-radius: 999px; font-weight: 600; font-size: 15px;
+    color: var(--on-accent); background: var(--accent); transition: transform .2s, box-shadow .2s; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(242, 169, 0, .28); text-decoration: none; color: var(--on-accent); }
+  .btn.ghost:link, .btn.ghost:visited { background: transparent; color: var(--strong); border: 1px solid var(--ghost-border); }
+  .btn.ghost:hover { background: var(--ghost-hover); box-shadow: none; color: var(--strong); }
+
+  /* oscillating grid mesh (drawn by the script at the bottom) */
+  canvas.mesh { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  .hero canvas.mesh { -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 100%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 100%); }
+  .s-results canvas.mesh { opacity: .55;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 25%, #000 75%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 25%, #000 75%, transparent 100%); }
+  .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 140px; z-index: 1; pointer-events: none;
+    background: linear-gradient(180deg, transparent, var(--intro-bg)); }
+
+  /* ---------- cards ---------- */
+  .card { background: var(--card); border: 1px solid var(--card-border); border-radius: 14px; padding: 22px 26px;
+    margin: 1.6em 0; box-shadow: 0 10px 40px var(--card-shadow); }
+  .card > :last-child { margin-bottom: 0; }
+  .card.eq { overflow-x: auto; border-left: 3px solid var(--accent); }
+  .callout { border-radius: 14px; padding: 20px 26px; margin: 1.6em 0; border: 1px solid; }
+  .callout h4 { margin: 0 0 .5em; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; }
+  .callout > :last-child { margin-bottom: 0; }
+  .callout.bad  { background: rgba(255, 90, 80, .08);  border-color: rgba(255, 90, 80, .35); }
+  .callout.bad h4 { color: var(--bad); }
+  .callout.good { background: rgba(60, 220, 160, .08); border-color: rgba(60, 220, 160, .35); }
+  .callout.good h4 { color: var(--good); }
+
+  .eqlist { list-style: none; margin: 1.2em 0; padding: 0; display: grid; gap: 12px; }
+  .eqlist li { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 20px;
+    display: grid; grid-template-columns: 5.5em 1fr; column-gap: 22px; align-items: center; }
+  .eqlist li > b { justify-self: start; white-space: nowrap; padding: 4px 10px; border-radius: 8px;
+    background: var(--badge); color: var(--accent); font-size: 13px; }
+
+  .figure { margin: 2em 0; padding: 14px; border-radius: 16px; text-align: center; border: 1px solid var(--card-border);
+    background: var(--figure-bg); box-shadow: 0 0 80px var(--figure-glow); }
+  .figure img { max-width: 100%; height: auto; border-radius: 10px; display: block; margin: 0 auto; background: #000; }
+  .figure figcaption { color: var(--muted); font-size: 14px; margin-top: .8em; }
+
+  .formula { margin: 1em 0; overflow-x: auto; overflow-y: hidden; }
   mjx-container { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+  code { background: var(--code); padding: 1px 6px; border-radius: 5px; }
+
+  .footer-links { margin-top: 2em; padding-top: 1.2em; border-top: 1px solid var(--card-border); color: var(--muted); font-size: 14px; }
+  .signoff { font-size: 18px; color: var(--strong); }
+
+  /* ---------- smooth reveal ---------- */
+  .js .reveal { opacity: 0; transform: translateY(22px); transition: opacity .8s ease, transform .8s cubic-bezier(.2, .7, .2, 1); }
+  .js .reveal.in { opacity: 1; transform: none; }
+
+  @media (max-width: 640px) {
+    section { padding: 90px 16px 70px; }
+    h2 { font-size: 25px; }
+    .topbar .home span { display: none; }
+    .card, .callout { padding: 18px; }
+    .eqlist li { grid-template-columns: 1fr; row-gap: 8px; padding: 14px 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .js .reveal { opacity: 1; transform: none; transition: none; }
+  }
 </style>
 </head>
 <body>
-<div class="content">
-<div class="blog-title"><a href="../index.html">Convergence Point</a></div>
-<article class="post">
-<h1 class="post-title">Why my wave simulation kept blowing up</h1>
-<div class="post-body entry-content">
-<p>
-  A few years ago, I spent a while implementing some simulations of massless
-  scalar fields in AdS. This means that we were using the simplest description
-  of matter with only a Kinetic term in a geometric background with a negative
-  cosmological constant.
-</p>
-<h2 style="text-align: left;">Why is this interesting?</h2>
-<p>
-  Although these collections of spacetimes are not favored by measurements made
-  of our current Universe, it has been shown that the dynamics in the AdS
-  spacetime is related to
-  <a href="https://arxiv.org/pdf/hep-th/9108028" target="_blank">conformal field theories</a>, as in what happens in one system has an analogous phenomenon in the other.
-  People have been using this relationship to better understand both classes of
-  systems.
-</p>
-<p>
-  The starting point for what I'm simulating is described in a
-  technical paper&nbsp;<a href="https://arxiv.org/pdf/1104.3702" target="_blank">(Bizoń &amp; Rostworowski, arXiv:1104.3702)</a>&nbsp;but I'll explain here anyway.
-</p>
-<p><br /></p>
-<div class="separator" style="clear: both; text-align: center;">
-  <div class="BLOG_html_snippet"><div class="paper-equations">
+
+<header class="topbar">
+  <a class="home" href="../index.html">&larr; <span>Convergence Point</span></a>
+  <nav aria-label="Sections">
+    <a href="#intro">Context</a>
+    <a href="#setup">Equations</a>
+    <a href="#boundaries">Boundaries</a>
+    <a href="#solving">Solving</a>
+    <a href="#challenge">Challenge</a>
+    <a href="#results">Results</a>
+  </nav>
+  <span data-theme-switch></span>
+</header>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <div class="wrap">
+    <div class="kicker">Numerical relativity &middot; AdS spacetime</div>
+    <h1>Why my wave simulation kept blowing up</h1>
+    <p class="lede">
+      Simulating a massless scalar field in anti-de Sitter space looks simple.
+      This is the story of why the obvious finite-difference scheme goes
+      unstable, and what finally fixed it.
+    </p>
+    <div class="btns">
+      <a class="btn" href="#results">Jump to the results</a>
+      <a class="btn ghost" href="wave_notes.html">Technical notes</a>
+    </div>
+    <p class="hero-meta">Posted October 27, 2026</p>
+  </div>
+  <canvas class="mesh" data-hue="215" aria-hidden="true"></canvas>
+</div>
+
+<!-- ============ CONTEXT ============ -->
+<section class="s-intro" id="intro">
+  <div class="wrap">
+    <h2 data-num="01" class="reveal">Why is this interesting?</h2>
+    <p class="reveal">
+      A few years ago, I spent a while implementing some simulations of massless
+      scalar fields in AdS. This means that we were using the simplest description
+      of matter with only a Kinetic term in a geometric background with a negative
+      cosmological constant.
+    </p>
+    <p class="reveal">
+      Although these collections of spacetimes are not favored by measurements made
+      of our current Universe, it has been shown that the dynamics in the AdS
+      spacetime is related to
+      <a href="https://arxiv.org/pdf/hep-th/9108028" target="_blank">conformal field theories</a>, as in what happens in one system has an analogous phenomenon in the other.
+      People have been using this relationship to better understand both classes of
+      systems.
+    </p>
+    <p class="reveal">
+      The starting point for what I'm simulating is described in a
+      technical paper&nbsp;<a href="https://arxiv.org/pdf/1104.3702" target="_blank">(Bizoń &amp; Rostworowski, arXiv:1104.3702)</a>&nbsp;but I'll explain here anyway.
+    </p>
+  </div>
+</section>
+
+<!-- ============ EQUATIONS ============ -->
+<section class="s-setup" id="setup">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,35 C240,75 480,0 720,35 S1200,70 1440,30 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="02" class="reveal">The equations</h2>
+
+    <div class="card eq reveal">
       <p>
         <strong>Einstein-scalar field equations</strong> (massless scalar,
         \(\Lambda &lt; 0\) ):
@@ -91,179 +308,215 @@
       \begin{equation} A' = \frac{1+2\sin^2 x}{\sin x\cos x}\,(1-A) - \sin x\cos
       x\,A\left(\Phi^2+\Pi^2\right) \end{equation} \begin{equation} \delta' =
       -\sin x\cos x\left(\Phi^2+\Pi^2\right) \end{equation}
-    </div></div>
-</div>
-<br />
-<div class="separator" style="clear: both; text-align: justify;">
-  To clarify what this all means:
-</div>
-<div class="separator" style="clear: both; text-align: justify;">
-  <ul>
-    <li>
-      Eq. 1 is the Einstein equation, the left-hand side is the spacetime
-      geometry and the right-hand side is the energy-momentum tensor given the
-      scalar field's interactions.
-    </li>
-    <li>Eq. 2 is the scalar field evolution equations.</li>
-    <li>
-      Eq. 3 is the metric tensor. This tensor tells us how distances/times
-      change with coordinates.
-    </li>
-    <li>
-      Eq. 4 are both a trivial result of the change of variables we are using
-      and a derivation from Eq. 2. These equations are at the center of our
-      simulation as they define how the field evolves.
-    </li>
-    <li>
-      Eq. 5 and Eq. 6 are derived from a lengthy computation from Eq. 1 with the
-      metric tensor in Eq. 3. These tell us the profiles of how the space curves
-      with the presence of the field.
-    </li>
-  </ul>
-  <div>All of these functions are dependent on the (t,x) coordinates.</div>
-  <div>
-    Regarding the metric tensor... In these coordinates, we can visualize the
-    spacetime as a cylinder where x is the radius of the cylinder and t the
-    "height". The solution we are looking for is spherically symmetric so we are
-    looking for variations in the dt.dt and dr.dr components. Notice also that
-    the impact of the cosmological constant is absorbed into the coordinate
-    system: this means that if we study the system for any given value of the
-    cosmological constant, we'll be able to scale the solution for another value
-    without redoing the whole simulation/calculations.
-  </div>
-  <div><br /></div>
-  <div>
-    Now, if you look at eq. 4 and squint your eyes a little, you'll be able to
-    see the wave equation in spherical coordinates. If A = 1 and delta = 0 we
-    have
-  </div>
-  <div><br /></div>
-  <div>\[ \dot\Pi = \frac{1}{\tan^2 x}\,\bigl(\tan^2 x\,\Phi\bigr)' \]</div>
-  <div><br /></div>
-  <div>
-    This is the massless wave equation on the AdS background in spherical
-    coordinates with spherical symmetry and m=0, where tan&#178;x plays the role that
-    r&#178; plays in flat space. The massless
-    <a href="https://en.wikipedia.org/wiki/Klein%E2%80%93Gordon_equation" target="_blank">Klein-Gordon equation</a>
-    on pure AdS, which has the same structure as the spherical wave equation.
-  </div>
-  <div><br /></div>
-  <div>
-    Now that we know how to compute the profiles and field evolution we need to
-    understand how they behave at the boundaries. There are two important
-    boundaries: x = 0 and x = pi/2. For the system to be physically
-    representative we need to set boundary conditions
-  </div>
-  <div><br /></div>
-  <div class="separator" style="clear: both; text-align: center;">
-    <div class="BLOG_html_snippet"><div class="paper-equations" style="overflow-x: auto;">
-        <p>
-          Boundary behavior of \(\phi\), \(A\) and \(\delta\), from Bizoń and
-          Rostworowski,
-          <a href="https://arxiv.org/abs/1104.3702">arXiv:1104.3702</a>.
-        </p>
-
-        <p>
-          <strong>Near the origin</strong> (\(x\to 0\)), where smoothness gives
-          power series in \(x\), normalized so that \(\delta(t,0)=0\) and \(t\)
-          is the proper time at the center:
-        </p>
-        \begin{equation}\tag{7} \begin{aligned} \phi(t,x) &amp;= f_0(t) +
-        O(x^2),\\ \delta(t,x) &amp;= O(x^2),\\ A(t,x) &amp;= 1 + O(x^2).
-        \end{aligned} \end{equation}
-
-        <p>
-          <strong>Near the AdS boundary</strong> (\(x\to\pi/2\)), with
-          \(\rho=\pi/2-x\), where smoothness and finite total mass \(M\) fix the
-          expansions:
-        </p>
-        \begin{equation}\tag{8} \begin{aligned} \phi(t,x) &amp;=
-        f_\infty(t)\,\rho^3 + O(\rho^5),\\ \delta(t,x) &amp;= \delta_\infty(t) +
-        O(\rho^6),\\ A(t,x) &amp;= 1 - 2M\rho^3 + O(\rho^6). \end{aligned}
-        \end{equation}
-      </div></div>
-  </div>
-  <br />
-  <div><br /></div>
-  <div><br /></div>
-  <h2>Solving the equation</h2>
-  <div>
-    For the simulation, we need to discretize the spacetime. We use a
-    <a href="https://en.wikipedia.org/wiki/Finite_difference_method" target="_blank">finite differences method</a>
-    and for the time evolution we use
-    <a href="https://mathworld.wolfram.com/Runge-KuttaMethod.html" target="_blank">RK4</a>.
-  </div>
-</div>
-<div><br /></div>
-We set a grid with N equidistant points over the radial coordinate ranging from
-0 to pi/2. In this case we'll have
-<div></div>
-<div>
-  <div>\[ dx = \frac{\pi}{2(N-1)} \]</div>
-  <div><br /></div>
-  <div>
-    Likewise we also have a condition for the timestep we are able to calculate.
-    The wave velocity in these coordinates is lesser or equal to 1 and the
-    <a href="https://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition#Statement" target="_blank">Courant condition</a>
-    requires
-  </div>
-  <div>\[ dt \leqslant \frac{dx}{c} = dx \]</div>
-  <div><br /></div>
-  <div>In practice, I use dt = dx/2.</div><div>At any given time we can compute the value of A and δ and then use them to
-    compute the rhs of the evolution equations. At the boundaries I add ghost points outside the grid, with values set by the parity of Π and Φ at each end, so the stencil can be applied at every grid point.
-  </div>
-  <div><br /></div>
-  <h3 style="text-align: left;">So... What's the challenge here?</h3>
-  <div>
-    If you take a look at the evolution equation for Π, we see that we have,
-    near the x=0, an indetermination 0/0 and we need to be careful about how we
-    handle this.
-  </div>
-  <div><br /></div>
-  <div>Expanding the product gives</div>
-  <div>\[\dot\Pi = \Phi' + \frac{2\Phi}{\sin x\cos x} \]</div>
-  <div>
-    and the coefficient blows up at both ends. At the origin there is a clean
-    limit: Φ = O(x), so Φ/(sin x cos x) &#8594; Φ&#8242;(0) and
-  </div>
-  <div>\[ \dot\Pi(0) = 3\Phi'(0)&nbsp;\]</div>
-  <div>
-    That handles the 0/0. It does not make the scheme stable. This form is
-    unstable for every time step I tried. The worst mode grows at a rate of
-    about 0.39/dx near π/2 and 0.1/dx near 0, because that is where 1/(sin x cos
-    x) &#8776; 1/dx. This means that the more we discretize the grid to finer results,
-    the larger the growth rate of this instability near the edges.</div>
-  <div style="text-align: left;"><br /></div>
-  <h4 style="text-align: left;">Why it happens.</h4>
-  <div style="text-align: justify;">The continuous system conserves</div>
-  <div style="text-align: justify;">
-    \[ E=\int \tan^2 x\,(\Pi^2+\Phi^2)\,dx \]
-  </div>
-  <div style="text-align: justify;">but only because of the product rule:</div>
-  <div style="text-align: justify;">
-    \[ (\tan^2 x\,\Phi)' = \tan^2 x \Phi' + (\tan^2 x)' \Phi \]
-  </div>
-  <div style="text-align: justify;">
-    A finite-difference stencil does not obey the product rule. For smooth data
-    the defect is tiny (about 1e-5 or less). For grid-scale oscillations it is
-    of order 1, and those are exactly the modes that grow. Splitting the product
-    feeds energy into them.
-  </div>
-  <div><br /></div>
-  <div>A first attempt is to not split the product. Build g = tan&#178;x&#183;A&#183;e^{-δ}&#183;Φ, differentiate it, and divide afterwards. This converges at order 4 and looks stable on short runs. It isn't. The origin node has energy weight tan&#178;(0) = 0 yet still couples to its neighbours, which leaves a growing mode that only appears after t &#8776; 100 to 300. In the full Einstein system it can look like a collapse before the run turns into NaN. A short run is not a stability test.The actual fix is to absorb tan x into the fields, Θ = tan x&#183;Π and Ψ = tan x&#183;Φ (with an extra factor &#8730;(A e^{-δ}) in the full system). Then</div><div>\[ \dot\Theta = \Psi' + b\Psi,\qquad \dot\Psi = \Theta' - b\Theta,\qquad b=\frac{1}{\sin x\cos x} \]</div><div>The b terms have opposite signs, so they cancel pointwise in the energy and no product rule is needed. The spatial operator conserves the discrete energy exactly, and its eigenvalues are purely imaginary. With this form the runs stay stable for much longer.</div><div><br /></div><div>
-    <h3 style="text-align: left;">The results</h3>
-    <div>We start with a Gaussian initial condition on Π&nbsp;and flat Φ.</div>
-    We let the fields evolve and the pulse reaches&nbsp;x=π/2 at t =&nbsp;π/2 and
-    returns to the origin at t = π, so the dynamics has period π. If the field is intense enough, the
-    backreaction causes the field to focus on an increasingly narrower band of
-    space, eventually collapsing into a black hole. In the simulation below
-    there's the evolution of one such example. We determine that a black hole
-    is formed when the function A goes to 0, with the initial BH horizon at the
-    position where A went to 0.</div><div><p></p>
-    <div class="separator" style="clear: both; text-align: center;">
-      <a href="img/wave.gif" style="margin-left: 1em; margin-right: 1em;"><img alt="Animation of the fields Pi and Phi (top) and the metric functions A and delta (bottom) on x from 0 to pi/2" data-original-height="622" data-original-width="800" height="622" src="img/wave.gif" width="800" style="max-width: 100%; height: auto; box-sizing: border-box;" /></a>
     </div>
-    <p>
+
+    <p class="reveal">To clarify what this all means:</p>
+    <ul class="eqlist">
+      <li class="reveal"><b>Eq. 1</b>
+        The Einstein equation. The left-hand side is the spacetime
+        geometry and the right-hand side is the energy-momentum tensor given the
+        scalar field's interactions.
+      </li>
+      <li class="reveal"><b>Eq. 2</b> The scalar field evolution equation.</li>
+      <li class="reveal"><b>Eq. 3</b>
+        The metric tensor. This tensor tells us how distances/times
+        change with coordinates.
+      </li>
+      <li class="reveal"><b>Eq. 4</b>
+        Both a trivial result of the change of variables we are using
+        and a derivation from Eq. 2. These equations are at the center of our
+        simulation as they define how the field evolves.
+      </li>
+      <li class="reveal"><b>Eq. 5&ndash;6</b>
+        Derived from a lengthy computation from Eq. 1 with the
+        metric tensor in Eq. 3. These tell us the profiles of how the space curves
+        with the presence of the field.
+      </li>
+    </ul>
+
+    <p class="reveal">All of these functions are dependent on the (t,x) coordinates.</p>
+    <p class="reveal">
+      Regarding the metric tensor... In these coordinates, we can visualize the
+      spacetime as a cylinder where x is the radius of the cylinder and t the
+      "height". The solution we are looking for is spherically symmetric so we are
+      looking for variations in the dt.dt and dr.dr components. Notice also that
+      the impact of the cosmological constant is absorbed into the coordinate
+      system: this means that if we study the system for any given value of the
+      cosmological constant, we'll be able to scale the solution for another value
+      without redoing the whole simulation/calculations.
+    </p>
+    <p class="reveal">
+      Now, if you look at eq. 4 and squint your eyes a little, you'll be able to
+      see the wave equation in spherical coordinates. If A = 1 and delta = 0 we
+      have
+    </p>
+    <div class="card eq formula reveal">\[ \dot\Pi = \frac{1}{\tan^2 x}\,\bigl(\tan^2 x\,\Phi\bigr)' \]</div>
+    <p class="reveal">
+      This is the massless wave equation on the AdS background in spherical
+      coordinates with spherical symmetry and m=0, where tan&#178;x plays the role that
+      r&#178; plays in flat space. The massless
+      <a href="https://en.wikipedia.org/wiki/Klein%E2%80%93Gordon_equation" target="_blank">Klein-Gordon equation</a>
+      on pure AdS, which has the same structure as the spherical wave equation.
+    </p>
+  </div>
+</section>
+
+<!-- ============ BOUNDARIES ============ -->
+<section class="s-bound" id="boundaries">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,30 C300,0 540,75 800,35 S1200,0 1440,40 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="03" class="reveal">Boundary conditions</h2>
+    <p class="reveal">
+      Now that we know how to compute the profiles and field evolution we need to
+      understand how they behave at the boundaries. There are two important
+      boundaries: x = 0 and x = pi/2. For the system to be physically
+      representative we need to set boundary conditions
+    </p>
+
+    <div class="card eq reveal">
+      <p>
+        Boundary behavior of \(\phi\), \(A\) and \(\delta\), from Bizoń and
+        Rostworowski,
+        <a href="https://arxiv.org/abs/1104.3702">arXiv:1104.3702</a>.
+      </p>
+
+      <p>
+        <strong>Near the origin</strong> (\(x\to 0\)), where smoothness gives
+        power series in \(x\), normalized so that \(\delta(t,0)=0\) and \(t\)
+        is the proper time at the center:
+      </p>
+      \begin{equation}\tag{7} \begin{aligned} \phi(t,x) &amp;= f_0(t) +
+      O(x^2),\\ \delta(t,x) &amp;= O(x^2),\\ A(t,x) &amp;= 1 + O(x^2).
+      \end{aligned} \end{equation}
+
+      <p>
+        <strong>Near the AdS boundary</strong> (\(x\to\pi/2\)), with
+        \(\rho=\pi/2-x\), where smoothness and finite total mass \(M\) fix the
+        expansions:
+      </p>
+      \begin{equation}\tag{8} \begin{aligned} \phi(t,x) &amp;=
+      f_\infty(t)\,\rho^3 + O(\rho^5),\\ \delta(t,x) &amp;= \delta_\infty(t) +
+      O(\rho^6),\\ A(t,x) &amp;= 1 - 2M\rho^3 + O(\rho^6). \end{aligned}
+      \end{equation}
+    </div>
+  </div>
+</section>
+
+<!-- ============ SOLVING ============ -->
+<section class="s-solve" id="solving">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,40 C260,75 520,5 760,38 S1220,72 1440,28 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="04" class="reveal">Solving the equation</h2>
+    <p class="reveal">
+      For the simulation, we need to discretize the spacetime. We use a
+      <a href="https://en.wikipedia.org/wiki/Finite_difference_method" target="_blank">finite differences method</a>
+      and for the time evolution we use
+      <a href="https://mathworld.wolfram.com/Runge-KuttaMethod.html" target="_blank">RK4</a>.
+    </p>
+    <p class="reveal">
+      We set a grid with N equidistant points over the radial coordinate ranging from
+      0 to pi/2. In this case we'll have
+    </p>
+    <div class="card eq formula reveal">\[ dx = \frac{\pi}{2(N-1)} \]</div>
+    <p class="reveal">
+      Likewise we also have a condition for the timestep we are able to calculate.
+      The wave velocity in these coordinates is lesser or equal to 1 and the
+      <a href="https://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition#Statement" target="_blank">Courant condition</a>
+      requires
+    </p>
+    <div class="card eq formula reveal">\[ dt \leqslant \frac{dx}{c} = dx \]</div>
+    <p class="reveal">In practice, I use dt = dx/2.</p>
+    <p class="reveal">
+      At any given time we can compute the value of A and δ and then use them to
+      compute the rhs of the evolution equations. At the boundaries I add ghost points outside the grid, with values set by the parity of Π and Φ at each end, so the stencil can be applied at every grid point.
+    </p>
+  </div>
+</section>
+
+<!-- ============ CHALLENGE ============ -->
+<section class="s-problem" id="challenge">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,28 C300,70 540,0 820,40 S1200,70 1440,34 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="05" class="reveal">So... What's the challenge here?</h2>
+    <p class="reveal">
+      If you take a look at the evolution equation for Π, we see that we have,
+      near the x=0, an indetermination 0/0 and we need to be careful about how we
+      handle this.
+    </p>
+    <p class="reveal">Expanding the product gives</p>
+    <div class="card eq formula reveal">\[\dot\Pi = \Phi' + \frac{2\Phi}{\sin x\cos x} \]</div>
+    <p class="reveal">
+      and the coefficient blows up at both ends. At the origin there is a clean
+      limit: Φ = O(x), so Φ/(sin x cos x) &#8594; Φ&#8242;(0) and
+    </p>
+    <div class="card eq formula reveal">\[ \dot\Pi(0) = 3\Phi'(0)&nbsp;\]</div>
+
+    <div class="callout bad reveal">
+      <h4>It blows up</h4>
+      <p>
+        That handles the 0/0. It does not make the scheme stable. This form is
+        unstable for every time step I tried. The worst mode grows at a rate of
+        about 0.39/dx near π/2 and 0.1/dx near 0, because that is where 1/(sin x cos
+        x) &#8776; 1/dx. This means that the more we discretize the grid to finer results,
+        the larger the growth rate of this instability near the edges.
+      </p>
+    </div>
+
+    <h3 class="reveal">Why it happens.</h3>
+    <p class="reveal">The continuous system conserves</p>
+    <div class="card eq formula reveal">\[ E=\int \tan^2 x\,(\Pi^2+\Phi^2)\,dx \]</div>
+    <p class="reveal">but only because of the product rule:</p>
+    <div class="card eq formula reveal">\[ (\tan^2 x\,\Phi)' = \tan^2 x \Phi' + (\tan^2 x)' \Phi \]</div>
+    <p class="reveal">
+      A finite-difference stencil does not obey the product rule. For smooth data
+      the defect is tiny (about 1e-5 or less). For grid-scale oscillations it is
+      of order 1, and those are exactly the modes that grow. Splitting the product
+      feeds energy into them.
+    </p>
+
+    <div class="callout bad reveal">
+      <h4>A first attempt that fails slowly</h4>
+      <p>
+        A first attempt is to not split the product. Build g = tan&#178;x&#183;A&#183;e^{-δ}&#183;Φ, differentiate it, and divide afterwards. This converges at order 4 and looks stable on short runs. It isn't. The origin node has energy weight tan&#178;(0) = 0 yet still couples to its neighbours, which leaves a growing mode that only appears after t &#8776; 100 to 300. In the full Einstein system it can look like a collapse before the run turns into NaN. A short run is not a stability test.
+      </p>
+    </div>
+
+    <div class="callout good reveal">
+      <h4>The fix</h4>
+      <p>
+        The actual fix is to absorb tan x into the fields, Θ = tan x&#183;Π and Ψ = tan x&#183;Φ (with an extra factor &#8730;(A e^{-δ}) in the full system). Then
+      </p>
+      <div class="formula">\[ \dot\Theta = \Psi' + b\Psi,\qquad \dot\Psi = \Theta' - b\Theta,\qquad b=\frac{1}{\sin x\cos x} \]</div>
+      <p>
+        The b terms have opposite signs, so they cancel pointwise in the energy and no product rule is needed. The spatial operator conserves the discrete energy exactly, and its eigenvalues are purely imaginary. With this form the runs stay stable for much longer.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section class="s-results" id="results">
+  <canvas class="mesh" data-hue="200" aria-hidden="true"></canvas>
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,34 C240,0 500,70 760,36 S1180,0 1440,38 V70 H0Z"/></svg>
+  <div class="wrap">
+    <h2 data-num="06" class="reveal">The results</h2>
+    <p class="reveal">We start with a Gaussian initial condition on Π&nbsp;and flat Φ.</p>
+    <p class="reveal">
+      We let the fields evolve and the pulse reaches&nbsp;x=π/2 at t =&nbsp;π/2 and
+      returns to the origin at t = π, so the dynamics has period π. If the field is intense enough, the
+      backreaction causes the field to focus on an increasingly narrower band of
+      space, eventually collapsing into a black hole. In the simulation below
+      there's the evolution of one such example. We determine that a black hole
+      is formed when the function A goes to 0, with the initial BH horizon at the
+      position where A went to 0.
+    </p>
+
+    <figure class="figure reveal">
+      <a href="img/wave.gif"><img alt="Animation of the fields Pi and Phi (top) and the metric functions A and delta (bottom) on x from 0 to pi/2" height="622" src="img/wave.gif" width="800" /></a>
+      <figcaption>Fields &Pi; and &Phi; (top) and metric functions A and &delta; (bottom) on x from 0 to &pi;/2.</figcaption>
+    </figure>
+
+    <p class="reveal">
       In the simulation A doesn't go all the way to 0 because the velocity of
       the wave goes to 0 and, along with the metric ansatz, &nbsp;our
       implementation is no longer able to continue the computation. We are
@@ -272,32 +525,148 @@ We set a grid with N equidistant points over the radial coordinate ranging from
       simulation went for a few more frames before that condition was actually
       met.
     </p>
-    <p>
+    <p class="reveal">
       For more results, feel free to check the original technical paper linked
       at the beginning.
     </p>
-    <p>
+  </div>
+</section>
+
+<!-- ============ CLOSING ============ -->
+<section class="s-end" id="end">
+  <svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,36 C300,70 560,0 840,34 S1220,66 1440,30 V70 H0Z"/></svg>
+  <div class="wrap">
+    <p class="reveal signoff">
       As a final personal note, I'm proud of myself. After so much time and
       having this ghost of not knowing what went wrong hovering over me. I feel
-      it brings some kind of closure.<br />
+      it brings some kind of closure.
     </p>
-    <p>
+    <p class="reveal">
       I hope this helps anyone that finds themselves with similar problems
       solving numerically variants of the wave equations in spherical
       coordinates.
     </p>
-    <div class="separator" style="clear: both; text-align: center;"><br /></div>
-    <br />
-
-    <p></p>
+    <div class="footer-links reveal">
+      Posted October 27, 2026.
+      The code is on <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4">GitHub</a> (see the <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4/blob/main/README.md">README</a> and the longer <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4/blob/main/docs/NOTES.md">notes</a>; <a href="wave_notes.html">rendered version</a>).
+    </div>
   </div>
-</div>
-</div>
-<div class="post-footer">
-Posted October 27, 2026.
-The code is on <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4">GitHub</a> (see the <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4/blob/main/README.md">README</a> and the longer <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4/blob/main/docs/NOTES.md">notes</a>; <a href="wave_notes.html">rendered version</a>).
-</div>
-</article>
-</div>
+</section>
+
+</main>
+
+<script>
+  // Fade sections in as they scroll into view.
+  (function () {
+    var items = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      items.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+    items.forEach(function (el) { io.observe(el); });
+
+    // Highlight the current section in the top bar.
+    var links = {};
+    document.querySelectorAll('.topbar nav a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting && links[e.target.id]) {
+          Object.keys(links).forEach(function (k) { links[k].classList.remove('active'); links[k].removeAttribute('aria-current'); });
+          links[e.target.id].classList.add('active');
+          links[e.target.id].setAttribute('aria-current', 'true');
+        }
+      });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    document.querySelectorAll('main section[id]').forEach(function (s) { spy.observe(s); });
+  })();
+</script>
+<script>
+  // Grid mesh whose nodes oscillate like a few standing-wave modes of a membrane.
+  (function () {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var COLS = 44, ROWS = 26;
+
+    function height(a, z, t) {
+      return 0.60 * Math.sin(Math.PI * a) * Math.sin(Math.PI * z) * Math.cos(0.9 * t)
+           + 0.35 * Math.sin(3 * Math.PI * a) * Math.sin(2 * Math.PI * z) * Math.cos(1.7 * t + 1)
+           + 0.20 * Math.sin(5 * Math.PI * a) * Math.sin(3 * Math.PI * z) * Math.cos(2.6 * t);
+    }
+
+    function Mesh(canvas) {
+      this.c = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.hue = +canvas.getAttribute('data-hue') || 215;
+      this.visible = false;
+      this.pts = [];
+      this.resize();
+    }
+    Mesh.prototype.resize = function () {
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this.w = this.c.clientWidth; this.h = this.c.clientHeight;
+      this.c.width = Math.round(this.w * dpr); this.c.height = Math.round(this.h * dpr);
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for (var j = 0; j <= ROWS; j++) this.pts[j] = this.pts[j] || [];
+    };
+    Mesh.prototype.draw = function (t) {
+      var ctx = this.ctx, w = this.w, h = this.h, hue = this.hue;
+      var horizon = h * 0.22, bottom = h * 0.98, pts = this.pts, i, j;
+      ctx.clearRect(0, 0, w, h);
+      for (j = 0; j <= ROWS; j++) {
+        var z = j / ROWS, s = 1 / (1 + 1.6 * z);            // simple perspective: far rows shrink
+        var gy = horizon + (bottom - horizon) * (s - 0.38) / 0.62;
+        for (i = 0; i <= COLS; i++) {
+          var a = i / COLS, hv = height(a, z, t);
+          var p = pts[j][i] || (pts[j][i] = {});
+          p.x = w / 2 + (a - 0.5) * w * 1.25 * s;
+          p.y = gy - hv * h * 0.16 * s;
+          p.s = s; p.hv = hv;
+        }
+      }
+      ctx.lineWidth = 1;
+      // Bright lines on the dark theme, deeper ones on the light theme.
+      var light = document.documentElement.getAttribute('data-theme') === 'light';
+      function seg(p, q, self) {
+        var m = (p.hv + q.hv) / 2, k = Math.min(1, Math.abs(m));
+        var lum = light ? 42 - k * 14 : 52 + k * 28;
+        var alpha = light ? 0.14 + 0.5 * p.s * (0.45 + k) : 0.10 + 0.55 * p.s * (0.45 + k);
+        ctx.strokeStyle = 'hsla(' + (hue + m * 35) + ',85%,' + lum + '%,' + alpha + ')';
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+      }
+      for (j = 0; j <= ROWS; j++) for (i = 0; i < COLS; i++) seg(pts[j][i], pts[j][i + 1]);       // rows
+      for (i = 0; i <= COLS; i++) for (j = 0; j < ROWS; j++) seg(pts[j][i], pts[j + 1][i]);       // columns
+    };
+
+    var meshes = [];
+    document.querySelectorAll('canvas.mesh').forEach(function (c) { meshes.push(new Mesh(c)); });
+
+    if (reduce || !('IntersectionObserver' in window)) {
+      meshes.forEach(function (m) { m.draw(0.6); });
+      var redraw = function () { meshes.forEach(function (m) { m.resize(); m.draw(0.6); }); };
+      window.addEventListener('resize', redraw);
+      window.addEventListener('themechange', redraw);
+      return;
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        meshes.forEach(function (m) { if (m.c === e.target) m.visible = e.isIntersecting; });
+      });
+    });
+    meshes.forEach(function (m) { io.observe(m.c); });
+    window.addEventListener('resize', function () { meshes.forEach(function (m) { m.resize(); }); });
+
+    var t0 = performance.now();
+    (function frame(now) {
+      var t = (now - t0) / 1000 * 0.8;
+      meshes.forEach(function (m) { if (m.visible) m.draw(t); });
+      requestAnimationFrame(frame);
+    })(t0);
+  })();
+</script>
 </body>
 </html>

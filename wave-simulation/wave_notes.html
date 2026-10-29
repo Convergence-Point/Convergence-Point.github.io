@@ -4,12 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wave equation on AdS4: derivations, lessons and results</title>
+<link rel="stylesheet" href="../theme.css">
+<script src="../theme.js"></script>
 <style>
-  :root { --fg:#1d2330; --muted:#566074; --bg:#fbfbfd; --card:#ffffff; --line:#d9deea; --accent:#1f4fa3; --code:#f1f4fa; --warn:#8a4b00; }
+  :root { color-scheme: light; --fg:#1d2330; --muted:#566074; --bg:#fbfbfd; --card:#ffffff; --line:#d9deea; --accent:#1f4fa3; --code:#f1f4fa; --warn:#8a4b00;
+          --warn-bg:#fff8ec; --warn-line:#e0b36b; --th:#eef2fa; --fig-bg:#fff; --on-accent:#fff; --sw-border:var(--line); }
+  /* theme.js sets data-theme on <html>; the choice is shared with the other pages */
+  :root[data-theme="dark"] { color-scheme: dark; --fg:#e2e7f1; --muted:#9aa5ba; --bg:#12151d; --card:#1a1e29; --line:#2c3344; --accent:#8ab4ff; --code:#1f2431; --warn:#f0c27a;
+          --warn-bg:#2a2214; --warn-line:#6d5326; --th:#232938; --fig-bg:#e8ecf4; --on-accent:#12151d; }
   * { box-sizing: border-box; }
   body { margin:0; font:16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--fg); background:var(--bg); }
   header, main, footer { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem; }
   header { padding-top: 2.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+  .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; font-size: .95rem; }
   h1 { font-size: 1.9rem; margin: 0 0 .4rem; }
   h2 { font-size: 1.45rem; margin-top: 2.6rem; padding-top: .6rem; border-top: 1px solid var(--line); }
   h3 { font-size: 1.15rem; margin-top: 1.8rem; }
@@ -25,15 +32,15 @@
   .eq { background: var(--card); border-left: 4px solid var(--accent); padding: .5rem 1rem; margin: 1rem 0; overflow-x: auto; }
   .eq math { font-size: 1.15em; }
   .note, .why, .warn { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .7rem 1rem; margin: 1rem 0; }
-  .warn { border-color: #e0b36b; background: #fff8ec; color: var(--warn); }
+  .warn { border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn); }
   .why { border-left: 4px solid #2f8f5b; }
   table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: var(--card); font-size: .95rem; }
   caption { text-align: left; font-weight: 600; padding: .3rem 0; }
   th, td { border: 1px solid var(--line); padding: .4rem .6rem; text-align: left; vertical-align: top; }
-  th { background: #eef2fa; }
+  th { background: var(--th); }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   figure { margin: 1.2rem 0; }
-  figure img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  figure img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--fig-bg); }
   figcaption { color: var(--muted); font-size: .9rem; }
   details { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .5rem 1rem; margin: .8rem 0; }
   summary { cursor: pointer; font-weight: 600; }
@@ -43,6 +50,7 @@
 </head>
 <body>
 <header>
+  <div class="topline"><a href="../index.html">&larr; Convergence Point</a><span data-theme-switch></span></div>
   <h1>Wave equation on AdS<sub>4</sub></h1>
   <p class="lead">Derivations, lessons learnt and results for the radial scalar field on global AdS<sub>4</sub> (<math><mi>r</mi><mo>=</mo><mi>L</mi><mi>tan</mi><mo>&#x2061;</mo><mi>x</mi></math>), evolved with RK4 in time and a centred finite-difference stencil in space. Source: <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4/blob/main/docs/NOTES.md"><code>docs/NOTES.md</code></a> in the <a href="https://github.com/Convergence-Point/scalar-field-backreaction-ads4">code repository</a>.</p>
   <nav aria-label="Contents">

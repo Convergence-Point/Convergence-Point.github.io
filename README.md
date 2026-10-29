@@ -10,8 +10,13 @@ They are published with [GitHub Pages](https://pages.github.com/), served from t
 | `wave-simulation/wave_notes.html` | Derivations, measurements and lessons learnt, rendered from `docs/NOTES.md` in [scalar-field-backreaction-ads4](https://github.com/Convergence-Point/scalar-field-backreaction-ads4) (equations in MathML) |
 | `wave-simulation/img/` | `wave.gif` (the animation, plays once) and `convergence.png` (figure used in the notes) |
 
+| `theme.js`, `theme.css` | Shared light/dark theme: sets `data-theme` on `<html>` from the saved choice (`localStorage` key `theme`) or the system setting, and renders the sun/moon switch into any `[data-theme-switch]` element |
+
 All links are relative, so the pages work when opened from disk and when served from any path.
 
 To add a topic, create a folder with its own `index.html` and `img/`, then add a card for it to the front page.
 
 `wave_notes.html` is generated from `NOTES.md` in the code repository. After changing the notes, regenerate it there and copy it to `wave-simulation/`.
+The copy here has theme support added by hand (dark palette variables, the `theme.css`/`theme.js` includes, and the header switch), so the generator template needs the same changes or they will be lost on regeneration.
+
+To add theming to a new page: include `theme.css` and `theme.js` in `<head>` (the script without `async`/`defer`), define your colors under `:root[data-theme="dark"]`, and drop a `<span data-theme-switch></span>` where the switch should appear.
