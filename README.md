@@ -13,6 +13,7 @@ They are published with [GitHub Pages](https://pages.github.com/), served from t
 | `static-ads/index.html` | Article on static stars in AdS and their radial stability, with `img/` for its figures |
 | `static-ads/derivation.html` | Derivation of the profile and stability equations (copied from `einstein_derivation.html` in the Static_AdS project, with theme support added) |
 | `post.css`, `post.js` | Shared styles and scripts for the article pages (sections, hero mesh, reveal-on-scroll, scroll-spy nav) |
+| `favicon.svg`, `favicon.ico`, `apple-touch-icon.png` | Site icon: a spiral converging to a point, coloured like the stability plots (blue, red, orange, purple). The SVG is the source; the ICO and PNG are fallbacks rendered from it with ImageMagick |
 | `theme.js`, `theme.css` | Shared light/dark theme: sets `data-theme` on `<html>` from the saved choice (`localStorage` key `theme`) or the system setting, and renders the sun/moon switch into any `[data-theme-switch]` element |
 
 All links are relative, so the pages work when opened from disk and when served from any path.
